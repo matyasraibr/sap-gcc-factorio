@@ -11,7 +11,14 @@ const game = (() => {
     empty:'empty', output:'output',
     ore_i:'ore_i',  ore_p:'ore_p',  ore_c:'ore_c',
     min_i:'min_i',  min_p:'min_p',  min_c:'min_c',
+    // Generic belts
     b_r:'b_r', b_l:'b_l', b_d:'b_d', b_u:'b_u',
+    // INC-only belts (blue)
+    bi_r:'bi_r', bi_l:'bi_l', bi_d:'bi_d', bi_u:'bi_u',
+    // PRB-only belts (orange)
+    bp_r:'bp_r', bp_l:'bp_l', bp_d:'bp_d', bp_u:'bp_u',
+    // CHG-only belts (purple)
+    bc_r:'bc_r', bc_l:'bc_l', bc_d:'bc_d', bc_u:'bc_u',
     compiler:'compiler', qa_gate:'qa_gate',
     change_board:'change_board', hana_db:'hana_db', rnd:'rnd',
     sm36:'sm36', stms:'stms', oss:'oss', bw_dtp:'bw_dtp',
@@ -23,12 +30,26 @@ const game = (() => {
 
   const ORE_TILES  = new Set([T.ore_i, T.ore_p, T.ore_c]);
   const MIN_TILES  = new Set([T.min_i, T.min_p, T.min_c]);
-  const BELT_TILES = new Set([T.b_r, T.b_l, T.b_d, T.b_u]);
+  const BELT_TILES = new Set([T.b_r, T.b_l, T.b_d, T.b_u,
+    T.bi_r,T.bi_l,T.bi_d,T.bi_u,
+    T.bp_r,T.bp_l,T.bp_d,T.bp_u,
+    T.bc_r,T.bc_l,T.bc_d,T.bc_u]);
+  // Which ore types a coloured belt accepts (null = all)
+  const BELT_ORE = {
+    bi_r:'incident',bi_l:'incident',bi_d:'incident',bi_u:'incident',
+    bp_r:'problem', bp_l:'problem', bp_d:'problem', bp_u:'problem',
+    bc_r:'change',  bc_l:'change',  bc_d:'change',  bc_u:'change',
+  };
   const PROC_TILES = new Set([T.compiler, T.qa_gate, T.change_board, T.hana_db, T.sm36, T.stms, T.oss, T.bw_dtp,
     T.inc_triage, T.inc_resolver, T.inc_closer,
     T.prb_analyst, T.prb_rootcause, T.prb_change,
     T.chg_impact, T.chg_cab, T.chg_deploy]);
-  const BELT_MOVE  = { b_r:{dx:1,dy:0}, b_l:{dx:-1,dy:0}, b_d:{dx:0,dy:1}, b_u:{dx:0,dy:-1} };
+  const BELT_MOVE  = {
+    b_r:{dx:1,dy:0},  b_l:{dx:-1,dy:0}, b_d:{dx:0,dy:1},  b_u:{dx:0,dy:-1},
+    bi_r:{dx:1,dy:0}, bi_l:{dx:-1,dy:0},bi_d:{dx:0,dy:1},  bi_u:{dx:0,dy:-1},
+    bp_r:{dx:1,dy:0}, bp_l:{dx:-1,dy:0},bp_d:{dx:0,dy:1},  bp_u:{dx:0,dy:-1},
+    bc_r:{dx:1,dy:0}, bc_l:{dx:-1,dy:0},bc_d:{dx:0,dy:1},  bc_u:{dx:0,dy:-1},
+  };
 
   const ORE_TO_MIN = { ore_i:'min_i', ore_p:'min_p', ore_c:'min_c' };
   const MIN_TO_ORE = { min_i:'ore_i', min_p:'ore_p', min_c:'ore_c' };
@@ -73,7 +94,8 @@ const game = (() => {
 
   const PROC_DEFAULTS = { compiler:2, qa_gate:1, change_board:3, hana_db:2, sm36:2, stms:3, oss:1, bw_dtp:3,
     inc_triage:1, inc_resolver:2, inc_closer:1, prb_analyst:2, prb_rootcause:3, prb_change:2, chg_impact:3, chg_cab:4, chg_deploy:2 };
-  const COSTS = { miner:150, belt:8, compiler:300, qa_gate:200, change_board:500, hana_db:800, output:400, rnd:600, sm36:200, stms:300, oss:280, bw_dtp:500, splitter:60,
+  const COSTS = { miner:150, belt:8, belt_i:12, belt_p:20, belt_c:35,
+    compiler:300, qa_gate:200, change_board:500, hana_db:800, output:400, rnd:600, sm36:200, stms:300, oss:280, bw_dtp:500, splitter:60,
     inc_triage:150, inc_resolver:300, inc_closer:600, prb_analyst:400, prb_rootcause:800, prb_change:1200, chg_impact:800, chg_cab:1500, chg_deploy:2500 };
   const BELT_CYCLE = ['b_r','b_d','b_u','b_l'];
   const HOTKEYS = {'1':'miner','2':'b_r','3':'compiler','4':'qa_gate','5':'change_board','6':'hana_db','x':'delete'};
@@ -196,12 +218,18 @@ const game = (() => {
     }));
   }
 
-  const TILE_ICON={[T.min_i]:'⛏',[T.min_p]:'⛏',[T.min_c]:'⛏',[T.b_r]:'',[T.b_l]:'',[T.b_d]:'',[T.b_u]:'',
+  const TILE_ICON={
+    [T.min_i]:'⛏',[T.min_p]:'⛏',[T.min_c]:'⛏',
+    [T.b_r]:'',[T.b_l]:'',[T.b_d]:'',[T.b_u]:'',
+    [T.bi_r]:'',[T.bi_l]:'',[T.bi_d]:'',[T.bi_u]:'',
+    [T.bp_r]:'',[T.bp_l]:'',[T.bp_d]:'',[T.bp_u]:'',
+    [T.bc_r]:'',[T.bc_l]:'',[T.bc_d]:'',[T.bc_u]:'',
     [T.output]:'🏭',[T.compiler]:'⚙',[T.qa_gate]:'✔',[T.change_board]:'📋',[T.hana_db]:'🗄',[T.rnd]:'🔬',
     [T.sm36]:'⏱',[T.stms]:'🚌',[T.oss]:'📝',[T.bw_dtp]:'📊',[T.splitter]:'⊕',
     [T.inc_triage]:'🔵',[T.inc_resolver]:'🔄',[T.inc_closer]:'✅',
     [T.prb_analyst]:'🔶',[T.prb_rootcause]:'🔍',[T.prb_change]:'🔀',
-    [T.chg_impact]:'🔮',[T.chg_cab]:'📋',[T.chg_deploy]:'🚀'};
+    [T.chg_impact]:'🔮',[T.chg_cab]:'📋',[T.chg_deploy]:'🚀',
+  };
 
   function renderGrid() {
     for (let y=0;y<ROWS;y++) for (let x=0;x<COLS;x++) {
@@ -341,8 +369,9 @@ const game = (() => {
     }
     if(BELT_TILES.has(tool)){
       if(t!==T.empty){toast('Belt jen na prázdné pole!');return;}
-      if(state.budget<COSTS.belt){toast(`❌ Potřebuješ ${COSTS.belt} CZK`);return;}
-      state.budget-=COSTS.belt;state.grid[y][x]=tool;
+      const beltCost=tool.startsWith('bi')?COSTS.belt_i:tool.startsWith('bp')?COSTS.belt_p:tool.startsWith('bc')?COSTS.belt_c:COSTS.belt;
+      if(state.budget<beltCost){toast(`❌ Potřebuješ ${beltCost} CZK`);return;}
+      state.budget-=beltCost;state.grid[y][x]=tool;
       renderGrid();updateUI();return;
     }
     if(tool==='splitter'){
@@ -420,42 +449,54 @@ const game = (() => {
   }
 
   // ── RESEARCH ───────────────────────────────────────────────────────────────
-  function buildResearchPanel(){
-    const list=$('research-list');if(!list)return;
-    list.innerHTML='';
-    for(const[key,r]of Object.entries(RESEARCH)){
-      const el=document.createElement('div');
-      el.id=`res-${key}`;el.className=`res-item tier-${r.tier}`;
-      const cLbl=r.rpCost?`${r.rpCost} RP${r.cost?'+'+r.cost:''}`:`${r.cost} CZK`;
-      el.innerHTML=`<div class="res-row"><span class="res-icon">${r.icon}</span><div class="res-text"><span class="res-name">${r.label}</span><span class="res-desc">${r.desc}</span></div><button class="res-btn" onclick="game.research('${key}')">${cLbl}</button></div>`;
-      list.appendChild(el);
-    }
-    renderResearch();
-  }
+  function buildResearchPanel(){ renderResearch(); }
 
   function renderResearch(){
+    const avail=$('res-available'),locked=$('res-locked-list');
+    if(!avail||!locked)return;
+    avail.innerHTML='';locked.innerHTML='';
+    let lockedCount=0;
     for(const[key,r]of Object.entries(RESEARCH)){
-      const el=$(`res-${key}`);if(!el)continue;
-      const done=state.researched.has(key),locked=r.req.some(k=>!state.researched.has(k));
-      el.className=`res-item tier-${r.tier} ${done?'res-done':locked?'res-locked':'res-avail'}`;
-      const btn=el.querySelector('.res-btn');
-      const cLbl2=r.rpCost?`${r.rpCost} RP${r.cost?'+'+r.cost:''}`:`${r.cost} CZK`;
-      if(btn){btn.textContent=done?'✓':locked?'🔒':cLbl2;btn.disabled=done||locked;}
+      const done=state.researched.has(key);
+      const isLocked=r.req.some(k=>!state.researched.has(k));
+      const cLbl=r.rpCost?`${r.rpCost} RP${r.cost?'+'+r.cost:''}`:`${r.cost} CZK`;
+      const el=document.createElement('div');
+      el.id=`res-${key}`;
+      if(done){
+        el.className='res-item res-done';
+        el.innerHTML=`<div class="res-row"><span class="res-icon">${r.icon}</span><div class="res-text"><span class="res-name">${r.label}</span><span class="res-desc">${r.desc}</span></div><span class="res-done-badge">✓</span></div>`;
+        avail.appendChild(el);
+      } else if(!isLocked){
+        el.className='res-item res-avail';
+        el.innerHTML=`<div class="res-row"><span class="res-icon">${r.icon}</span><div class="res-text"><span class="res-name">${r.label}</span><span class="res-desc">${r.desc}</span></div><button class="res-btn" onclick="game.research('${key}')">${cLbl}</button></div>`;
+        avail.appendChild(el);
+      } else {
+        el.className='res-item res-locked-item';
+        el.innerHTML=`<div class="res-row"><span class="res-icon" style="opacity:.4">${r.icon}</span><div class="res-text"><span class="res-name" style="opacity:.5">${r.label}</span><span class="res-desc" style="opacity:.4">${r.desc}</span></div><span class="res-lock-badge">🔒 ${cLbl}</span></div>`;
+        locked.appendChild(el);
+        lockedCount++;
+      }
     }
-    ['change_board','hana_db'].forEach(k=>{
-      const btn=$('t-'+k.replace(/_/g,'-'));if(!btn)return;
-      const locked=!state.unlocked.has(k);
-      if(btn.querySelector('small'))btn.querySelector('small').textContent=locked?'🔒 Research':`${COSTS[k]} CZK`;
-      btn.classList.toggle('tool-locked',locked);
-    });
-    // Update hotbar + build menu
+    // update locked accordion label
+    const lh=$('res-locked-head');
+    if(lh)lh.textContent=`🔒 Zamčené (${lockedCount})`;
+    // update build menu locked state
     ['change_board','hana_db','stms','bw_dtp',
      'inc_resolver','inc_closer','prb_rootcause','prb_change','chg_impact','chg_cab','chg_deploy'].forEach(k=>{
-      const locked=!state.unlocked.has(k);
+      const isLk=!state.unlocked.has(k);
       const bmi=$('bm-'+k.replace(/_/g,'-'));
-      if(bmi){bmi.classList.toggle('bm-locked',locked);const lc=bmi.querySelector('.bm-lock-cost');if(lc)lc.textContent=locked?'🔒 RP needed':`${COSTS[k]} CZK`;}
+      if(bmi){bmi.classList.toggle('bm-locked',isLk);const lc=bmi.querySelector('.bm-lock-cost');if(lc)lc.textContent=isLk?'🔒 RP needed':`${COSTS[k]} CZK`;}
+      document.querySelectorAll(`.hb-slot[data-tool="${k}"]`).forEach(s=>s.classList.toggle('hb-locked',isLk));
     });
     if(state.buildMenuOpen)renderBuildMenu();
+  }
+
+  // ── HOTBAR TOGGLE ──────────────────────────────────────────────────────────
+  function toggleHotbar(){
+    const hb=$('hotbar');if(!hb)return;
+    hb.classList.toggle('hb-hidden');
+    const btn=$('hb-toggle-btn');
+    if(btn)btn.textContent=hb.classList.contains('hb-hidden')?'▲ Tools':'▼ Hide';
   }
 
   function research(key){
@@ -569,7 +610,11 @@ const game = (() => {
       }
       // Splitter: item enters, will be routed next pass
       if(nt===T.splitter){if(free(nx,ny,it.id)){it.x=nx;it.y=ny;}continue;}
-      if(!BELT_TILES.has(nt)&&nt!==T.output&&nt!==T.rnd)continue;
+      // Coloured belts block wrong ore type
+      if(BELT_TILES.has(nt)){
+        const allowed=BELT_ORE[nt];
+        if(allowed&&allowed!==it.type)continue; // wrong ore — blocked
+      } else if(nt!==T.output&&nt!==T.rnd){continue;}
       if(!free(nx,ny,it.id))continue;
       it.x=nx;it.y=ny;
     }
@@ -903,6 +948,7 @@ const game = (() => {
     if(e.key==='ArrowRight'){e.preventDefault();panCamera( 1,0);return;}
 
     if(k==='b'){toggleBuildMenu();return;}
+    if(k==='`'||k==='h'){toggleHotbar();return;}
     if(k==='1'){purchaseBuilding('service_desk');return;}
     if(k==='2'){purchaseBuilding('problem_mgmt');return;}
     if(k==='3'){purchaseBuilding('cab');return;}
@@ -1053,5 +1099,5 @@ const game = (() => {
 
   document.addEventListener('DOMContentLoaded',init);
   return { selectTool, cycleBelt, bmTab, toggleTheme, research, openMenu, closeMenu, saveGame, loadGame, newGame, titleNewGame,
-           purchaseBuilding, openBuildMenu, closeBuildMenu, toggleBuildMenu };
+           purchaseBuilding, openBuildMenu, closeBuildMenu, toggleBuildMenu, toggleHotbar };
 })();
