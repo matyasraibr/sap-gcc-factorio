@@ -100,6 +100,8 @@ const game = (() => {
     researched:new Set(), unlocked:new Set(['compiler','qa_gate']),
     minerInterval:3, globalMult:1.0, beltPasses:1,
     paused:true,
+    rp:0,
+    deploysLastMin:[], // timestamps of last 60s deploys for RPM
   };
 
   const $ = id => document.getElementById(id);
@@ -140,7 +142,8 @@ const game = (() => {
 
   const TILE_ICON={[T.min_i]:'⛏',[T.min_p]:'⛏',[T.min_c]:'⛏',
     [T.b_r]:'',[T.b_l]:'',[T.b_d]:'',[T.b_u]:'',
-    [T.output]:'🏭',[T.compiler]:'⚙',[T.qa_gate]:'✔',[T.change_board]:'📋',[T.hana_db]:'🗄'};
+    [T.output]:'🏭',[T.compiler]:'⚙',[T.qa_gate]:'✔',[T.change_board]:'📋',[T.hana_db]:'🗄',
+    [T.rnd]:'🔬',[T.sm36]:'⏱',[T.stms]:'🚌',[T.oss]:'📝',[T.bw_dtp]:'📊',[T.splitter]:'⊕'};
 
   function renderGrid() {
     for(let y=0;y<ROWS;y++) for(let x=0;x<COLS;x++){
@@ -189,7 +192,7 @@ const game = (() => {
     const tool=state.tool,t=state.grid[y][x];
     if(tool==='delete'){
       if(MIN_TILES.has(t)){state.miners=state.miners.filter(m=>!(m.x===x&&m.y===y));state.grid[y][x]=MIN_TO_ORE[t];}
-      else if(BELT_TILES.has(t)||PROC_TILES.has(t))state.grid[y][x]=T.empty;
+      else if(BELT_TILES.has(t)||PROC_TILES.has(t)||t===T.output||t===T.rnd)state.grid[y][x]=T.empty;
       renderGrid();updateUI();return;
     }
     if(tool==='miner'){
@@ -214,6 +217,17 @@ const game = (() => {
       if(t!==T.empty){toast('Belt jen na prázdné pole!');return;}
       if(state.budget<COSTS.belt){toast(`❌ Potřebuješ ${COSTS.belt} CZK`);return;}
       state.budget-=COSTS.belt;state.grid[y][x]=tool;
+      renderGrid();updateUI();return;
+    }
+    // Special placeable tiles: output (PRD Station) and rnd (R&D Lab)
+    const SPECIAL_COSTS={output:400,rnd:500,sm36:200,oss:280,splitter:50};
+    const SPECIAL_NAMES={output:'PRD Deploy Station',rnd:'R&D Lab',sm36:'SM36 Scheduler',oss:'OSS Note Scanner',splitter:'Splitter'};
+    if(tool in SPECIAL_COSTS){
+      if(t!==T.empty){toast('Musí být prázdné pole!');return;}
+      const cost=SPECIAL_COSTS[tool];
+      if(state.budget<cost){toast(`❌ Potřebuješ ${cost} CZK`);return;}
+      state.budget-=cost;state.grid[y][x]=T[tool]??tool;
+      eventLog(`🏗 ${SPECIAL_NAMES[tool]} postaven (${x},${y})`,'good');
       renderGrid();updateUI();return;
     }
   }
@@ -262,17 +276,67 @@ const game = (() => {
       el.classList.toggle('bmi-active',el.dataset.tool===state.tool));
   }
 
-  let _bmOutsideHandler=null;
+  // ── BUILD MENU DRAG ────────────────────────────────────────────────────────
+  let _bmDrag={active:false,ox:0,oy:0,startX:0,startY:0};
+  let _bmPos={left:null,top:null}; // null = centered (CSS default)
+
+  function _bmApplyPos(){
+    const panel=$('bm-panel');if(!panel)return;
+    if(_bmPos.left!==null){
+      panel.style.left=_bmPos.left+'px';
+      panel.style.top=_bmPos.top+'px';
+      panel.style.transform='none';
+    } else {
+      panel.style.left='';panel.style.top='';panel.style.transform='';
+    }
+  }
+
+  function _bmHeaderDown(e){
+    const panel=$('bm-panel');if(!panel)return;
+    if(e.button!==0)return;
+    const r=panel.getBoundingClientRect();
+    _bmDrag.active=true;
+    _bmDrag.ox=e.clientX-(_bmPos.left??r.left);
+    _bmDrag.oy=e.clientY-(_bmPos.top??r.top);
+    panel.style.cursor='grabbing';
+    e.preventDefault();
+  }
+
+  document.addEventListener('mousemove',e=>{
+    if(!_bmDrag.active)return;
+    const panel=$('bm-panel');if(!panel)return;
+    const pw=panel.offsetWidth,ph=panel.offsetHeight;
+    let nx=e.clientX-_bmDrag.ox,ny=e.clientY-_bmDrag.oy;
+    nx=Math.max(0,Math.min(window.innerWidth-pw,nx));
+    ny=Math.max(0,Math.min(window.innerHeight-ph,ny));
+    _bmPos.left=nx;_bmPos.top=ny;
+    _bmApplyPos();
+  });
+
+  document.addEventListener('mouseup',()=>{
+    if(!_bmDrag.active)return;
+    _bmDrag.active=false;
+    const panel=$('bm-panel');if(panel)panel.style.cursor='';
+  });
 
   function openBuildMenu(){
     updateBuildMenu();
     const bm=$('build-menu-modal');
-    if(bm)bm.classList.remove('hidden');
+    if(!bm)return;
+    bm.classList.remove('hidden');
+    // Wire drag on header (only once)
+    const hdr=$('bm-header');
+    if(hdr&&!hdr._dragBound){hdr._dragBound=true;hdr.addEventListener('mousedown',_bmHeaderDown);}
+    _bmApplyPos();
   }
 
   function closeBuildMenu(){
     const bm=$('build-menu-modal');
     if(bm)bm.classList.add('hidden');
+    // Reset position so next open re-centers
+    _bmPos={left:null,top:null};
+    const panel=$('bm-panel');
+    if(panel){panel.style.left='';panel.style.top='';panel.style.transform='';}
   }
 
   function toggleBuildMenu(){
@@ -343,6 +407,147 @@ const game = (() => {
     renderResearch();updateUI();
   }
 
+  // ── RP MILESTONES ─────────────────────────────────────────────────────────
+  const RP_MILESTONES=[
+    {rp:50,  key:'change_board', label:'Change Board odemčen! (50 RP)', icon:'📋'},
+    {rp:150, key:'belt_express', label:'Express Belt 2× rychlost! (150 RP)', icon:'🚄', apply(s){s.beltPasses=2;}},
+    {rp:300, key:'stms',        label:'STMS Router odemčen! (300 RP)', icon:'🚌'},
+    {rp:400, key:'hana_db',     label:'HANA DB odemčen! (400 RP)', icon:'🗄'},
+    {rp:600, key:'bw_dtp',      label:'BW DTP Processor odemčen! (600 RP)', icon:'📊'},
+  ];
+  const _rpUnlocked=new Set();
+
+  function checkRpMilestones(){
+    const rp=state.rp||0;
+    for(const m of RP_MILESTONES){
+      if(_rpUnlocked.has(m.key))continue;
+      if(rp>=m.rp){
+        _rpUnlocked.add(m.key);
+        state.unlocked.add(m.key);
+        if(m.apply)m.apply(state);
+        toast(`${m.icon} Milestone: ${m.label}`,4500);
+        eventLog(`🔓 ${m.label}`,'good');
+        renderResearch();updateBuildMenu();updateUI();
+      }
+    }
+  }
+
+  // ── RANDOM EVENTS ─────────────────────────────────────────────────────────
+  const EVENTS = [
+    { w:18, name:'Audit IT Bezpečnosti', icon:'🛡',
+      apply(s){ const fine=Math.floor(s.budget*.08+200);s.budget=Math.max(0,s.budget-fine);
+        return `Audit zjistil nesoulad! Pokuta ${fine} CZK`; }, cls:'warn' },
+    { w:15, name:'Sprint Review Bonus', icon:'🎯',
+      apply(s){ const b=Math.floor(200+Math.random()*300*s.globalMult);s.budget+=b;
+        return `Sprint Review — PO spokojený! +${b} CZK`; }, cls:'good' },
+    { w:12, name:'Výpadek Produkčního Systému', icon:'🔥',
+      apply(s){ const lost=Math.min(s.items.length,Math.floor(2+Math.random()*3));
+        s.items.splice(0,lost); return `PRD Outage! ${lost} TRek ztraceno`; }, cls:'warn' },
+    { w:10, name:'Externí Konzultant SAP', icon:'🤵',
+      apply(s){ const b=Math.floor(500+Math.random()*800);s.budget+=b;
+        return `Konzultant optimalizoval procesy! +${b} CZK`; }, cls:'good' },
+    { w:8,  name:'Zákaznický Escalation', icon:'📞',
+      apply(s){ if(s.items.length===0)return null;
+        const chg=s.items.filter(i=>i.type==='change');
+        if(chg.length>0){chg[0].value=Math.floor(chg[0].value*1.8);return `Zákazník eskaloval! CHG priorita ×1.8`;}
+        return `Escalation call — žádné CHG items k urychlení`; }, cls:'warn' },
+    { w:8,  name:'Go-Live Bonus', icon:'🚀',
+      apply(s){ const bonus=Math.floor(s.totalDeploys*15+100);s.budget+=bonus;
+        return `Úspěšný Go-Live! Bonus ${bonus} CZK (${s.totalDeploys} dep)`; }, cls:'good' },
+    { w:7,  name:'Change Freeze', icon:'❄',
+      apply(s){ const frozen=s.items.filter(i=>i.type==='change').length;
+        s.items=s.items.filter(i=>i.type!=='change');
+        return frozen>0?`Change Freeze! ${frozen} CHG items zmrazeno`:`Change Freeze — ale žádné CHG items`; }, cls:'warn' },
+    { w:6,  name:'SAP Note Oprava', icon:'📝',
+      apply(s){ const b=Math.floor(150+Math.random()*200);s.budget+=b;
+        return `Kritická SAP Note aplikována! +${b} CZK saved`; }, cls:'good' },
+    { w:5,  name:'Hacker Incident', icon:'💀',
+      apply(s){ const fine=Math.floor(s.budget*.15+500);s.budget=Math.max(0,s.budget-fine);
+        return `Bezpečnostní incident! Nouzová záplata stála ${fine} CZK`; }, cls:'warn' },
+    { w:5,  name:'Šéf přijde na návštěvu', icon:'👔',
+      apply(s){ s.globalMult=+(s.globalMult*1.05).toFixed(4);
+        return `Šéf je impressed! Permanentní +5% payout mult`; }, cls:'good' },
+    { w:4,  name:'IDoc Flood', icon:'🌊',
+      apply(s){ for(let k=0;k<4;k++){
+          const types=['incident','incident','problem'];const tp=types[k%types.length];
+          const adj=[{dx:1,dy:0},{dx:0,dy:1},{dx:-1,dy:0},{dx:0,dy:-1}];
+          for(const m of s.miners){ for(const a of adj){
+            const nx=m.x+a.dx,ny=m.y+a.dy;
+            if(!inBounds(nx,ny))continue;
+            const nt=s.grid[ny][nx];
+            if(BELT_TILES.has(nt)&&!s.items.find(i=>i.x===nx&&i.y===ny)){
+              s.items.push({id:s.nextId++,x:nx,y:ny,type:tp,value:REQ[tp].value,stage:0,delay:0,pdx:0,pdy:0});break;
+            }
+          }}
+        } return `IDoc Flood! 4 extra items injektováno do pásů`; }, cls:'good' },
+    { w:3,  name:'Datová Katastrofa', icon:'💾',
+      apply(s){ const removed=Math.floor(s.items.length/2);
+        s.items.splice(0,removed);return `Disk crash! ${removed} TRek nenávratně ztraceno!`; }, cls:'warn' },
+    { w:3,  name:'Škoda Management Review', icon:'🏎',
+      apply(s){ const b=Math.floor(1000+s.totalDeploys*20);s.budget+=b;
+        return `Škoda Board impressed! Jednorázový bonus ${b} CZK`; }, cls:'good' },
+  ];
+
+  let _eventTick=0;
+  const EVENT_INTERVAL=25; // každých 25 ticků = cca 25 sekund
+
+  function maybeEvent(){
+    _eventTick++;
+    if(_eventTick<EVENT_INTERVAL)return;
+    _eventTick=0;
+    // Jen pokud hráč má alespoň 1 minera (aktivní hráč)
+    if(state.miners.length===0)return;
+    const total=EVENTS.reduce((s,e)=>s+e.w,0);
+    let rnd=Math.random()*total;
+    let ev=EVENTS[EVENTS.length-1];
+    for(const e of EVENTS){rnd-=e.w;if(rnd<=0){ev=e;break;}}
+    const msg=ev.apply(state);
+    if(msg){
+      const banner=$('event-banner');
+      banner.textContent=`${ev.icon} ${ev.name}: ${msg}`;
+      banner.className=''; // reset classes
+      banner.classList.add(ev.cls==='warn'?'event-warn':'event-good');
+      banner.classList.remove('hidden');
+      clearTimeout(toast._t);
+      toast._t=setTimeout(()=>banner.classList.add('hidden'),5000);
+      eventLog(`${ev.icon} ${msg}`,ev.cls);
+    }
+    renderItems();updateUI();
+  }
+
+  // ── ACHIEVEMENTS ──────────────────────────────────────────────────────────
+  const ACHIEVEMENTS=[
+    {id:'first_deploy',  icon:'🚀', label:'First Deploy!',     check:s=>s.totalDeploys>=1},
+    {id:'ten_deploys',   icon:'📦', label:'10 deployů!',       check:s=>s.totalDeploys>=10},
+    {id:'century',       icon:'💯', label:'100 deployů!',      check:s=>s.totalDeploys>=100},
+    {id:'rich',          icon:'💰', label:'Milionář! 1M CZK',  check:s=>s.budget>=1_000_000},
+    {id:'miners5',       icon:'⛏⛏', label:'5 minerů!',        check:s=>s.miners.length>=5},
+    {id:'researcher',    icon:'🔬', label:'5 výzkumů',         check:s=>s.researched.size>=5},
+    {id:'max_research',  icon:'🏆', label:'Všechny výzkumy!',  check:s=>s.researched.size>=Object.keys(RESEARCH).length},
+    {id:'hana_first',    icon:'🗄',  label:'HANA deployed!',   check:s=>s.totalDeploys>=1&&s.unlocked.has('hana_db')},
+  ];
+  const _achieved=new Set();
+
+  function checkAchievements(){
+    for(const a of ACHIEVEMENTS){
+      if(_achieved.has(a.id))continue;
+      if(a.check(state)){
+        _achieved.add(a.id);
+        showAchievement(a);
+      }
+    }
+  }
+
+  function showAchievement(a){
+    const el=document.createElement('div');
+    el.className='achievement-toast';
+    el.innerHTML=`<span class="ach-icon">${a.icon}</span><div><div class="ach-title">Achievement!</div><div class="ach-label">${a.label}</div></div>`;
+    document.body.appendChild(el);
+    requestAnimationFrame(()=>requestAnimationFrame(()=>el.classList.add('show')));
+    setTimeout(()=>{el.classList.remove('show');setTimeout(()=>el.remove(),400);},3500);
+    eventLog(`🏆 Achievement: ${a.label}`,'good');
+  }
+
   // ── GAME TICK ──────────────────────────────────────────────────────────────
   function inBounds(x,y){return x>=0&&x<COLS&&y>=0&&y<ROWS;}
   function free(nx,ny,id){return !state.items.some(i=>i.id!==id&&i.x===nx&&i.y===ny&&i.delay===0);}
@@ -366,13 +571,29 @@ const game = (() => {
       if(t===T.output){
         const payout=Math.floor(it.value*STAGE_MULT[it.stage]*state.globalMult);
         state.budget+=payout;state.totalDeploys++;state.tickBudget+=payout;
+        state.deploysLastMin.push(Date.now());
         eventLog(`🚀 ${REQ[it.type].icon}[${STAGE_LABEL[it.stage]}] +${payout} CZK`,'good');
         remove.add(it.id);flashPRD();continue;
+      }
+      if(t===T.rnd){
+        // R&D Lab: convert item to RP based on stage
+        const rpGain=Math.max(1,Math.floor([1,2,4,8,15][it.stage]*(it.type==='change'?2:it.type==='problem'?1.5:1)));
+        state.rp=(state.rp||0)+rpGain;
+        eventLog(`🔬 ${REQ[it.type].icon}→${rpGain} RP (total: ${state.rp})`,'good');
+        remove.add(it.id);
+        checkRpMilestones();continue;
       }
       const mv=BELT_MOVE[t];if(!mv)continue;
       const nx=it.x+mv.dx,ny=it.y+mv.dy;
       if(!inBounds(nx,ny))continue;
       const nt=grid[ny][nx];
+      if(nt===T.rnd){
+        // Route onto R&D Lab
+        if(!items.find(i=>i.id!==it.id&&i.x===nx&&i.y===ny)){
+          it.x=nx;it.y=ny;it.pdx=mv.dx;it.pdy=mv.dy;
+        }
+        continue;
+      }
       if(PROC_TILES.has(nt)){
         const cfg=PROC_CFG[nt];
         if(cfg&&it.stage===cfg.needStage&&!items.find(i=>i.id!==it.id&&i.x===nx&&i.y===ny)){
@@ -381,7 +602,7 @@ const game = (() => {
         }
         continue;
       }
-      if(!BELT_TILES.has(nt)&&nt!==T.output)continue;
+      if(!BELT_TILES.has(nt)&&nt!==T.output&&nt!==T.rnd)continue;
       if(!free(nx,ny,it.id))continue;
       it.x=nx;it.y=ny;
     }
@@ -398,7 +619,7 @@ const game = (() => {
       for(const n of adj){
         if(!inBounds(n.x,n.y))continue;
         const nt=state.grid[n.y][n.x];
-        if(!BELT_TILES.has(nt)&&!PROC_TILES.has(nt)&&nt!==T.output)continue;
+        if(!BELT_TILES.has(nt)&&!PROC_TILES.has(nt)&&nt!==T.output&&nt!==T.rnd)continue;
         if(state.items.find(i=>i.x===n.x&&i.y===n.y))continue;
         state.items.push({id:state.nextId++,x:n.x,y:n.y,type:m.type,value:REQ[m.type].value,stage:0,delay:0,pdx:0,pdy:0});
         break;
@@ -412,6 +633,8 @@ const game = (() => {
     }
     doMovePass();
     if(state.beltPasses>=2)doMovePass();
+    maybeEvent();
+    checkAchievements();
     renderItems();updateUI();
   }
 
@@ -439,6 +662,12 @@ const game = (() => {
     set('m-miners',s.miners.length);set('m-procs',procs);
     set('m-items',s.items.length);set('m-mult','×'+s.globalMult.toFixed(2));
     set('m-int',s.minerInterval+'s / '+(s.beltPasses>1?'×2':'×1'));
+    // RP display
+    const statRp=$('stat-rp');if(statRp)statRp.textContent=(s.rp||0)+' RP';
+    // RPM (deploys per minute based on last 60s)
+    const now=Date.now();
+    s.deploysLastMin=(s.deploysLastMin||[]).filter(t=>now-t<60000);
+    set('m-rpm',s.deploysLastMin.length+'/min');
     // Affordability on hotbar
     document.querySelectorAll('.hb-slot[data-cost]').forEach(el=>{
       const cost=parseInt(el.dataset.cost)||0;
@@ -449,9 +678,10 @@ const game = (() => {
   // ── SAVE / LOAD ────────────────────────────────────────────────────────────
   function saveGame(slot){
     const data={
-      v:2,ts:new Date().toLocaleString('cs-CZ'),
+      v:3,ts:new Date().toLocaleString('cs-CZ'),
       budget:state.budget,totalDeploys:state.totalDeploys,nextId:state.nextId,
       minerInterval:state.minerInterval,globalMult:state.globalMult,beltPasses:state.beltPasses,
+      rp:state.rp||0,
       grid:state.grid,items:state.items,miners:state.miners,
       researched:Array.from(state.researched),unlocked:Array.from(state.unlocked),
       procTicks:Object.fromEntries(Object.keys(PROC_DEFAULTS).map(k=>[k,PROC_CFG[T[k]].ticks])),
@@ -468,7 +698,8 @@ const game = (() => {
     const d=JSON.parse(raw);
     state.budget=d.budget;state.totalDeploys=d.totalDeploys;state.nextId=d.nextId;
     state.minerInterval=d.minerInterval??3;state.globalMult=d.globalMult??1;
-    state.beltPasses=d.beltPasses??1;state.tickBudget=0;
+    state.beltPasses=d.beltPasses??1;state.tickBudget=0;state.rp=d.rp||0;
+    state.deploysLastMin=[];
     state.grid=d.grid;state.items=d.items;state.miners=d.miners;
     state.researched=new Set(d.researched);state.unlocked=new Set(d.unlocked);
     if(d.procTicks)Object.keys(d.procTicks).forEach(k=>{if(T[k]&&PROC_CFG[T[k]])PROC_CFG[T[k]].ticks=d.procTicks[k];});
@@ -609,8 +840,21 @@ const game = (() => {
     }
   });
 
+  // ── THEME ─────────────────────────────────────────────────────────────────
+  function toggleTheme(){
+    const light=document.body.classList.toggle('light');
+    const btn=$('theme-btn');
+    if(btn)btn.textContent=light?'🌙 Dark':'☀ Light';
+    localStorage.setItem('sap_theme',light?'light':'dark');
+  }
+
   // ── INIT ───────────────────────────────────────────────────────────────────
   function init(){
+    // Restore theme
+    if(localStorage.getItem('sap_theme')==='light'){
+      document.body.classList.add('light');
+      const btn=$('theme-btn');if(btn)btn.textContent='🌙 Dark';
+    }
     buildGrid();renderGrid();renderItems();buildResearchPanel();updateUI();
     selectTool('miner');
     renderTitleSlots();
@@ -621,5 +865,5 @@ const game = (() => {
 
   document.addEventListener('DOMContentLoaded',init);
   return { selectTool, research, openMenu, closeMenu, saveGame, loadGame, newGame,
-           titleNewGame, toggleBuildMenu, openBuildMenu, closeBuildMenu, bmTab, purchaseBuilding };
+           titleNewGame, toggleBuildMenu, openBuildMenu, closeBuildMenu, bmTab, purchaseBuilding, toggleTheme };
 })();

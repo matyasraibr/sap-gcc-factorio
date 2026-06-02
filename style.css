@@ -968,6 +968,26 @@ body.light .hb-slot.active { background:var(--blue); color:#fff; }
 body.light .hb-build-btn { background:var(--raised); color:var(--blue); }
 body.light .bm-item.bmi-active { background:var(--blue); border-color:var(--blue2); color:#fff; }
 
+/* ===== ACHIEVEMENT TOASTS ===== */
+.achievement-toast {
+  position: fixed; bottom: 80px; right: 20px; z-index: 2000;
+  background: linear-gradient(135deg, #0d2040, #0a3020);
+  border: 1px solid var(--green); border-radius: 10px;
+  padding: 12px 16px; display: flex; align-items: center; gap: 12px;
+  box-shadow: 0 8px 32px rgba(0,184,106,.3), 0 0 0 1px rgba(0,184,106,.15);
+  opacity: 0; transform: translateX(40px);
+  transition: opacity .3s ease, transform .3s cubic-bezier(.34,1.4,.64,1);
+  pointer-events: none; min-width: 220px;
+}
+.achievement-toast.show { opacity: 1; transform: translateX(0); }
+.ach-icon { font-size: 1.8rem; flex-shrink: 0; }
+.ach-title { font-size: .6rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--green); }
+.ach-label { font-size: .78rem; font-weight: 700; color: var(--text); margin-top: 1px; }
+
+/* ===== EVENT BANNER VARIANTS ===== */
+#event-banner.event-warn { border-left-color: var(--yellow); color: var(--yellow); }
+#event-banner.event-good { border-left-color: var(--green);  color: var(--green);  }
+
 /* ===== RESOURCE GUIDE ===== */
 .rg-ore { border-radius:5px; overflow:hidden; margin-bottom:3px; border:1px solid var(--border); }
 .rg-ore summary { list-style:none; }
