@@ -16,12 +16,18 @@ const game = (() => {
     change_board:'change_board', hana_db:'hana_db', rnd:'rnd',
     sm36:'sm36', stms:'stms', oss:'oss', bw_dtp:'bw_dtp',
     splitter:'splitter',
+    inc_triage:'inc_triage', inc_resolver:'inc_resolver', inc_closer:'inc_closer',
+    prb_analyst:'prb_analyst', prb_rootcause:'prb_rootcause', prb_change:'prb_change',
+    chg_impact:'chg_impact', chg_cab:'chg_cab', chg_deploy:'chg_deploy',
   };
 
   const ORE_TILES  = new Set([T.ore_i, T.ore_p, T.ore_c]);
   const MIN_TILES  = new Set([T.min_i, T.min_p, T.min_c]);
   const BELT_TILES = new Set([T.b_r, T.b_l, T.b_d, T.b_u]);
-  const PROC_TILES = new Set([T.compiler, T.qa_gate, T.change_board, T.hana_db, T.sm36, T.stms, T.oss, T.bw_dtp]);
+  const PROC_TILES = new Set([T.compiler, T.qa_gate, T.change_board, T.hana_db, T.sm36, T.stms, T.oss, T.bw_dtp,
+    T.inc_triage, T.inc_resolver, T.inc_closer,
+    T.prb_analyst, T.prb_rootcause, T.prb_change,
+    T.chg_impact, T.chg_cab, T.chg_deploy]);
   const BELT_MOVE  = { b_r:{dx:1,dy:0}, b_l:{dx:-1,dy:0}, b_d:{dx:0,dy:1}, b_u:{dx:0,dy:-1} };
 
   const ORE_TO_MIN = { ore_i:'min_i', ore_p:'min_p', ore_c:'min_c' };
@@ -34,9 +40,9 @@ const game = (() => {
   const STAGE_CLS   = ['','s-tr','s-qa','s-cr','s-hana'];
 
   const REQ = {
-    incident: { value:75,  icon:'INC', cls:'item-inc' },
-    problem:  { value:200, icon:'PRB', cls:'item-prb' },
-    change:   { value:500, icon:'CHG', cls:'item-chg' },
+    incident: { value:100, icon:'INC', cls:'item-inc' },
+    problem:  { value:300, icon:'PRB', cls:'item-prb' },
+    change:   { value:800, icon:'CHG', cls:'item-chg' },
   };
 
   const PROC_CFG = {
@@ -53,10 +59,22 @@ const game = (() => {
     [T.oss]:    { needStage:-1, oreTypes:['incident','problem'], ticks:1, outStage:-1, valueMult:1.4 },
     // BW DTP: universal booster for QA✓(2)+ stages, ×1.8
     [T.bw_dtp]: { needStage:2, ticks:3, outStage:-1, valueMult:1.8 },
+    // Ore-specific pipeline buildings
+    [T.inc_triage]:   { needStage:0, oreTypes:['incident'], ticks:1, outStage:1 },
+    [T.inc_resolver]: { needStage:1, oreTypes:['incident'], ticks:2, outStage:2 },
+    [T.inc_closer]:   { needStage:2, oreTypes:['incident'], ticks:1, outStage:3 },
+    [T.prb_analyst]:  { needStage:0, oreTypes:['problem'],  ticks:2, outStage:1 },
+    [T.prb_rootcause]:{ needStage:1, oreTypes:['problem'],  ticks:3, outStage:2 },
+    [T.prb_change]:   { needStage:2, oreTypes:['problem'],  ticks:2, outStage:3 },
+    [T.chg_impact]:   { needStage:0, oreTypes:['change'],   ticks:3, outStage:1 },
+    [T.chg_cab]:      { needStage:1, oreTypes:['change'],   ticks:4, outStage:3 },
+    [T.chg_deploy]:   { needStage:3, oreTypes:['change'],   ticks:2, outStage:4 },
   };
 
-  const PROC_DEFAULTS = { compiler:2, qa_gate:1, change_board:3, hana_db:2, sm36:2, stms:3, oss:1, bw_dtp:3 };
-  const COSTS = { miner:80, belt:4, compiler:120, qa_gate:80, change_board:180, hana_db:300, output:250, rnd:400, sm36:200, stms:300, oss:280, bw_dtp:500, splitter:20 };
+  const PROC_DEFAULTS = { compiler:2, qa_gate:1, change_board:3, hana_db:2, sm36:2, stms:3, oss:1, bw_dtp:3,
+    inc_triage:1, inc_resolver:2, inc_closer:1, prb_analyst:2, prb_rootcause:3, prb_change:2, chg_impact:3, chg_cab:4, chg_deploy:2 };
+  const COSTS = { miner:150, belt:8, compiler:300, qa_gate:200, change_board:500, hana_db:800, output:400, rnd:600, sm36:200, stms:300, oss:280, bw_dtp:500, splitter:60,
+    inc_triage:150, inc_resolver:300, inc_closer:600, prb_analyst:400, prb_rootcause:800, prb_change:1200, chg_impact:800, chg_cab:1500, chg_deploy:2500 };
   const BELT_CYCLE = ['b_r','b_d','b_u','b_l'];
   const HOTKEYS = {'1':'miner','2':'b_r','3':'compiler','4':'qa_gate','5':'change_board','6':'hana_db','x':'delete'};
 
@@ -68,28 +86,31 @@ const game = (() => {
 
   // ── RESEARCH TREE ──────────────────────────────────────────────────────────
   const RESEARCH = {
-    budget_analyst:  { label:'Budget Analyst',    icon:'💰',  tier:0, desc:'+10% payouts',       cost:250,  req:[],                apply(s){s.globalMult*=1.10} },
-    fast_mining:     { label:'Fast Mining',        icon:'⚡',  tier:0, desc:'Mining 3s → 2s',     cost:300,  req:[],                apply(s){s.minerInterval=2} },
-    fast_compile:    { label:'Fast Compile',       icon:'⚙',  tier:0, desc:'Compiler 2s → 1s',   cost:400,  req:[],                apply(){PROC_CFG[T.compiler].ticks=1} },
-    auto_qa:         { label:'Auto QA',            icon:'🔬', tier:0, desc:'QA Gate instant',     cost:500,  req:[],                apply(){PROC_CFG[T.qa_gate].ticks=0} },
-    cost_optimizer:  { label:'Cost Optimizer',     icon:'💰💰',tier:1, desc:'+20% payouts',       cost:600,  req:['budget_analyst'],apply(s){s.globalMult*=1.20} },
-    turbo_mining:    { label:'Turbo Mining',       icon:'⚡⚡',tier:1, desc:'Mining 2s → 1s',     cost:800,  req:['fast_mining'],   apply(s){s.minerInterval=1} },
-    instant_compile: { label:'Instant Compile',    icon:'⚙⚙', tier:1, desc:'Compiler instant',  cost:1200, req:['fast_compile'],  apply(){PROC_CFG[T.compiler].ticks=0} },
-    ai_optimizer:    { label:'SAP AI Optimizer',   icon:'🤖', tier:2, desc:'Values +30%',         cost:2000, req:['instant_compile'],apply(s){s.globalMult*=1.30} },
-    cloud_integration:{ label:'Cloud Integration', icon:'☁️', tier:3, desc:'×1.5 all values',    cost:4000, req:['ai_optimizer'], apply(s){s.globalMult*=1.50} },
-    devops_pipeline: { label:'DevOps Pipeline',    icon:'🔄', tier:3, desc:'Change Board → 1s',  cost:2500, req:['ai_optimizer'], apply(){PROC_CFG[T.change_board].ticks=1} },
-    belt_booster:    { label:'Belt Speed Booster', icon:'🚄⚡',tier:1, desc:'Belts 25% faster',   cost:0,   rpCost:150, req:[], apply(s){s.beltTickMs=750;restartTick(750);} },
-    extraction_overclock:{ label:'Extraction Overclock',icon:'⛏⚡',tier:1, desc:'Miners −1s interval', cost:300, rpCost:0, req:[], apply(s){s.minerInterval=Math.max(1,s.minerInterval-1);} },
-    ai_inspector:    { label:'AI Quality Inspector',icon:'🤖🔍',tier:2, desc:'QA quality +15%',   cost:0,   rpCost:300, req:['belt_booster'], apply(s){s.globalMult*=1.15;} },
-    hana_cloud:      { label:'HANA Cloud Opt.',    icon:'☁⚡', tier:3, desc:'PRD payouts ×1.5',  cost:1000,rpCost:500, req:['ai_inspector'], apply(s){s.hanaCloudMult=1.5;} },
+    budget_analyst:  { label:'Budget Analyst',    icon:'💰',  tier:0, desc:'+10% payouts',       cost:400,  req:[],                apply(s){s.globalMult*=1.10} },
+    fast_mining:     { label:'Fast Mining',        icon:'⚡',  tier:0, desc:'Mining 3s → 2s',     cost:500,  req:[],                apply(s){s.minerInterval=2} },
+    fast_compile:    { label:'Fast Compile',       icon:'⚙',  tier:0, desc:'Compiler 2s → 1s',   cost:600,  req:[],                apply(){PROC_CFG[T.compiler].ticks=1} },
+    auto_qa:         { label:'Auto QA',            icon:'🔬', tier:0, desc:'QA Gate instant',     cost:800,  req:[],                apply(){PROC_CFG[T.qa_gate].ticks=0} },
+    cost_optimizer:  { label:'Cost Optimizer',     icon:'💰💰',tier:1, desc:'+20% payouts',       cost:1000, req:['budget_analyst'],apply(s){s.globalMult*=1.20} },
+    turbo_mining:    { label:'Turbo Mining',       icon:'⚡⚡',tier:1, desc:'Mining 2s → 1s',     cost:1200, req:['fast_mining'],   apply(s){s.minerInterval=1} },
+    instant_compile: { label:'Instant Compile',    icon:'⚙⚙', tier:1, desc:'Compiler instant',  cost:1800, req:['fast_compile'],  apply(){PROC_CFG[T.compiler].ticks=0} },
+    ai_optimizer:    { label:'SAP AI Optimizer',   icon:'🤖', tier:2, desc:'Values +30%',         cost:3000, req:['instant_compile'],apply(s){s.globalMult*=1.30} },
+    cloud_integration:{ label:'Cloud Integration', icon:'☁️', tier:3, desc:'×1.5 all values',    cost:6000, req:['ai_optimizer'], apply(s){s.globalMult*=1.50} },
+    devops_pipeline: { label:'DevOps Pipeline',    icon:'🔄', tier:3, desc:'Change Board → 1s',  cost:4000, req:['ai_optimizer'], apply(){PROC_CFG[T.change_board].ticks=1} },
+    belt_booster:    { label:'Belt Speed Booster', icon:'🚄⚡',tier:1, desc:'Belts 25% faster',   cost:0,   rpCost:200, req:[], apply(s){s.beltTickMs=750;restartTick(750);} },
+    extraction_overclock:{ label:'Extraction Overclock',icon:'⛏⚡',tier:1, desc:'Miners −1s interval', cost:500, rpCost:0, req:[], apply(s){s.minerInterval=Math.max(1,s.minerInterval-1);} },
+    ai_inspector:    { label:'AI Quality Inspector',icon:'🤖🔍',tier:2, desc:'QA quality +15%',   cost:0,   rpCost:400, req:['belt_booster'], apply(s){s.globalMult*=1.15;} },
+    hana_cloud:      { label:'HANA Cloud Opt.',    icon:'☁⚡', tier:3, desc:'PRD payouts ×1.5',  cost:1500,rpCost:600, req:['ai_inspector'], apply(s){s.hanaCloudMult=1.5;} },
   };
 
   // RP milestones — auto-unlock when state.rp reaches threshold
   const RP_MILESTONES=[
-    {rp:50, key:'m50', label:'Automation I — Change Board',        apply(s){s.unlocked.add('change_board');}},
-    {rp:150,key:'m150',label:'Advanced Logistics — Express Belts + STMS',apply(s){s.beltPasses=2;s.unlocked.add('stms');}},
-    {rp:300,key:'m300',label:'BW Integration — BW DTP Processor',  apply(s){s.unlocked.add('bw_dtp');}},
-    {rp:400,key:'m400',label:'High Performance — HANA DB',          apply(s){s.unlocked.add('hana_db');}},
+    {rp:5,  key:'m5',   label:'INC Resolver odemčen',              apply(s){s.unlocked.add('inc_resolver');}},
+    {rp:20, key:'m20',  label:'PRB Root Cause + CHG Impact',        apply(s){s.unlocked.add('prb_rootcause');s.unlocked.add('chg_impact');}},
+    {rp:50, key:'m50',  label:'Change Board + INC Closer',          apply(s){s.unlocked.add('change_board');s.unlocked.add('inc_closer');}},
+    {rp:100,key:'m100', label:'PRB→Change + CHG CAB',               apply(s){s.unlocked.add('prb_change');s.unlocked.add('chg_cab');}},
+    {rp:150,key:'m150', label:'Express Belts + STMS',               apply(s){s.beltPasses=2;s.unlocked.add('stms');}},
+    {rp:300,key:'m300', label:'BW DTP + CHG Emergency Deploy',      apply(s){s.unlocked.add('bw_dtp');s.unlocked.add('chg_deploy');}},
+    {rp:400,key:'m400', label:'HANA DB',                            apply(s){s.unlocked.add('hana_db');}},
   ];
 
   function genMap(){
@@ -119,10 +140,10 @@ const game = (() => {
 
   // ── STATE ──────────────────────────────────────────────────────────────────
   const state = {
-    budget:1500, totalDeploys:0, tickBudget:0,
+    budget:800, totalDeploys:0, tickBudget:0,
     grid:genMap(), items:[], miners:[],
     tool:'miner', nextId:0, rp:0,
-    researched:new Set(), unlocked:new Set(['compiler','qa_gate','sm36','oss']),
+    researched:new Set(), unlocked:new Set(['compiler','qa_gate','sm36','oss','inc_triage','prb_analyst']),
     rpMilestonesHit:new Set(),
     minerInterval:3, globalMult:1.0, beltPasses:1, beltTickMs:1000, hanaCloudMult:1.0,
     splitterCtrs:{}, rpmHistory:new Array(60).fill(0), rpmTick:0,
@@ -171,7 +192,10 @@ const game = (() => {
 
   const TILE_ICON={[T.min_i]:'⛏',[T.min_p]:'⛏',[T.min_c]:'⛏',[T.b_r]:'',[T.b_l]:'',[T.b_d]:'',[T.b_u]:'',
     [T.output]:'🏭',[T.compiler]:'⚙',[T.qa_gate]:'✔',[T.change_board]:'📋',[T.hana_db]:'🗄',[T.rnd]:'🔬',
-    [T.sm36]:'⏱',[T.stms]:'🚌',[T.oss]:'📝',[T.bw_dtp]:'📊',[T.splitter]:'⊕'};
+    [T.sm36]:'⏱',[T.stms]:'🚌',[T.oss]:'📝',[T.bw_dtp]:'📊',[T.splitter]:'⊕',
+    [T.inc_triage]:'🔵',[T.inc_resolver]:'🔄',[T.inc_closer]:'✅',
+    [T.prb_analyst]:'🔶',[T.prb_rootcause]:'🔍',[T.prb_change]:'🔀',
+    [T.chg_impact]:'🔮',[T.chg_cab]:'📋',[T.chg_deploy]:'🚀'};
 
   function renderGrid() {
     for (let y=0;y<ROWS;y++) for (let x=0;x<COLS;x++) {
@@ -277,7 +301,10 @@ const game = (() => {
       if(state.budget<COSTS[tool]){toast(`❌ Potřebuješ ${COSTS[tool]} CZK`);return;}
       state.budget-=COSTS[tool];state.grid[y][x]=T[tool];
       const n={compiler:'ABAP Compiler',qa_gate:'QA Gate',change_board:'Change Board',hana_db:'HANA DB',
-               sm36:'SM36 Scheduler',stms:'STMS Router',oss:'OSS Scanner',bw_dtp:'BW DTP'};
+               sm36:'SM36 Scheduler',stms:'STMS Router',oss:'OSS Scanner',bw_dtp:'BW DTP',
+               inc_triage:'INC Triage',inc_resolver:'INC Resolver',inc_closer:'INC Auto-Closer',
+               prb_analyst:'PRB Analyst',prb_rootcause:'Root Cause Analysis',prb_change:'PRB→Change',
+               chg_impact:'CHG Impact',chg_cab:'CHG CAB Review',chg_deploy:'CHG Emergency Deploy'};
       eventLog(`🏗 ${n[tool]||tool} (${x},${y})`,'good');
       renderGrid();updateUI();return;
     }
@@ -315,7 +342,7 @@ const game = (() => {
       HOTKEYS['2']=tool;
     }
     // Hotbar locked state — update via data-tool selectors
-    ['change_board','hana_db','stms','bw_dtp'].forEach(k=>{
+    ['change_board','hana_db','stms','bw_dtp','inc_resolver','inc_closer','prb_rootcause','prb_change','chg_impact','chg_cab','chg_deploy'].forEach(k=>{
       const locked=!state.unlocked.has(k);
       document.querySelectorAll(`.hb-slot[data-tool="${k}"]`).forEach(s=>s.classList.toggle('hb-locked',locked));
     });
@@ -326,23 +353,32 @@ const game = (() => {
 
     const locked=PROC_TILES.has(T[tool])&&!state.unlocked.has(tool);
     const hints={
-      miner:`⛏ Klikni na ore patch · každé ${state.minerInterval}s · 100 CZK  [Q]`,
-      b_r:'▶ Belt doprava · 5 CZK  [D / →]',
-      b_l:'◀ Belt doleva · 5 CZK  [A / ←]',
-      b_d:'▼ Belt dolů · 5 CZK  [S / ↓]',
-      b_u:'▲ Belt nahoru · 5 CZK  [W / ↑]',
-      compiler:`⚙ ABAP Compiler · RAW→TR · ${PROC_CFG[T.compiler].ticks}s · ×1.5 · 150 CZK  [E]`,
-      qa_gate:`✔ QA Gate · TR→QA✓ · ${PROC_CFG[T.qa_gate].ticks}s · ×2.1 · 100 CZK  [R]`,
-      change_board:locked?'📋 Change Board · 🔒 50 RP nutné [T]':`📋 Change Board · QA✓→CR✓ · ×3.2 · 200 CZK  [T]`,
-      hana_db:locked?'🗄 HANA DB · 🔒 400 RP nutné [Y]':`🗄 HANA DB · CR✓→HANA · ×4.8 · 350 CZK  [Y]`,
-      output:'🏭 PRD Station · Prodej TRek za CZK · 250 CZK  [P]',
-      rnd:'🔬 R&D Lab · TR → Research Points (RP) · 400 CZK  [L]',
+      miner:`⛏ Klikni na ore patch · každé ${state.minerInterval}s · 150 CZK  [Q]`,
+      b_r:'▶ Belt doprava · 8 CZK  [D / →]',
+      b_l:'◀ Belt doleva · 8 CZK  [A / ←]',
+      b_d:'▼ Belt dolů · 8 CZK  [S / ↓]',
+      b_u:'▲ Belt nahoru · 8 CZK  [W / ↑]',
+      compiler:`⚙ ABAP Compiler · RAW→TR · ${PROC_CFG[T.compiler].ticks}s · ×1.5 · 300 CZK  [E]`,
+      qa_gate:`✔ QA Gate · TR→QA✓ · ${PROC_CFG[T.qa_gate].ticks}s · ×2.1 · 200 CZK  [R]`,
+      change_board:locked?'📋 Change Board · 🔒 50 RP nutné [T]':`📋 Change Board · QA✓→CR✓ · ×3.2 · 500 CZK  [T]`,
+      hana_db:locked?'🗄 HANA DB · 🔒 400 RP nutné [Y]':`🗄 HANA DB · CR✓→HANA · ×4.8 · 800 CZK  [Y]`,
+      output:'🏭 PRD Station · Prodej TRek za CZK · 400 CZK  [P]',
+      rnd:'🔬 R&D Lab · TR → Research Points (RP) · 600 CZK  [L]',
       sm36:'⏱ SM36 Scheduler · INC RAW→QA✓ shortcut · 200 CZK  [Z]',
-      stms:'🚌 STMS Router · PRB TR→CR✓ shortcut (po Compileru) · 300 CZK  [U]',
+      stms:'🚌 STMS Router · PRB TR→CR✓ shortcut · 300 CZK  [U]',
       oss:'📝 OSS Scanner · INC+PRB value ×1.4 · CHG odmítá · 280 CZK  [I]',
       bw_dtp:'📊 BW DTP · QA✓+ stage ×1.8 · 500 CZK  [O]',
-      splitter:'⊕ Splitter · Rozděluje items round-robin na 2+ výstupy · 20 CZK  [F]',
+      splitter:'⊕ Splitter · Rozděluje items round-robin na 2+ výstupy · 60 CZK  [F]',
       delete:'❌ Delete · Smaže budovu nebo belt  [X]',
+      inc_triage:'🔵 INC Triage · INC RAW→TR · 1s · 150 CZK  [G]',
+      inc_resolver:state.unlocked.has('inc_resolver')?'🔄 INC Resolver · INC TR→QA✓ · 2s · 300 CZK  [H]':'🔄 INC Resolver · 🔒 5 RP nutné  [H]',
+      inc_closer:state.unlocked.has('inc_closer')?'✅ INC Auto-Closer · INC QA✓→CR✓ · 1s · 600 CZK  [J]':'✅ INC Auto-Closer · 🔒 50 RP nutné  [J]',
+      prb_analyst:'🔶 PRB Analyst · PRB RAW→TR · 2s · 400 CZK  [N]',
+      prb_rootcause:state.unlocked.has('prb_rootcause')?'🔍 Root Cause Analysis · PRB TR→QA✓ · 3s · 800 CZK  [M]':'🔍 Root Cause Analysis · 🔒 20 RP nutné  [M]',
+      prb_change:state.unlocked.has('prb_change')?'🔀 PRB→Change Converter · PRB QA✓→CR✓ · 2s · 1200 CZK  [,]':'🔀 PRB→Change · 🔒 100 RP nutné  [,]',
+      chg_impact:state.unlocked.has('chg_impact')?'🔮 CHG Impact Analyzer · CHG RAW→TR · 3s · 800 CZK  [V]':'🔮 CHG Impact · 🔒 20 RP nutné  [V]',
+      chg_cab:state.unlocked.has('chg_cab')?'📋 CHG CAB Review · CHG TR→CR✓ · 4s · 1500 CZK  [K]':'📋 CHG CAB · 🔒 100 RP nutné  [K]',
+      chg_deploy:state.unlocked.has('chg_deploy')?'🚀 CHG Emergency Deploy · CHG CR✓→HANA · 2s · 2500 CZK  [;]':'🚀 CHG Emergency Deploy · 🔒 300 RP nutné  [;]',
     };
     $('tool-hint').textContent=hints[tool]??'';
   }
@@ -382,7 +418,8 @@ const game = (() => {
       btn.classList.toggle('tool-locked',locked);
     });
     // Update hotbar + build menu
-    ['change_board','hana_db','stms','bw_dtp'].forEach(k=>{
+    ['change_board','hana_db','stms','bw_dtp',
+     'inc_resolver','inc_closer','prb_rootcause','prb_change','chg_impact','chg_cab','chg_deploy'].forEach(k=>{
       const locked=!state.unlocked.has(k);
       const bmi=$('bm-'+k.replace(/_/g,'-'));
       if(bmi){bmi.classList.toggle('bm-locked',locked);const lc=bmi.querySelector('.bm-lock-cost');if(lc)lc.textContent=locked?'🔒 RP needed':`${COSTS[k]} CZK`;}
@@ -589,7 +626,7 @@ const game = (() => {
   function openBuildMenu(){
     state.buildMenuOpen=true;
     $('build-menu-modal').classList.remove('hidden');
-    bmTab('production');
+    bmTab('pipelines');
     renderBuildMenu();
   }
   function closeBuildMenu(){
@@ -690,6 +727,7 @@ const game = (() => {
     state.beltTickMs=d.beltTickMs??1000;state.hanaCloudMult=d.hanaCloudMult??1.0;
     // Always ensure base-tier buildings are unlocked
     state.unlocked.add('sm36');state.unlocked.add('oss');
+    state.unlocked.add('inc_triage');state.unlocked.add('prb_analyst');
     state.splitterCtrs={};state.rpmHistory=new Array(60).fill(0);state.rpmTick=0;
     restartTick(state.beltTickMs);
     clearItemEls();renderGrid();renderItems();buildResearchPanel();updateUI();
@@ -702,9 +740,9 @@ const game = (() => {
 
   function newGame(){
     if(!confirm('Začít novou hru? Neuložený postup bude ztracen.'))return;
-    state.budget=1500;state.totalDeploys=0;state.tickBudget=0;
+    state.budget=800;state.totalDeploys=0;state.tickBudget=0;
     state.grid=genMap();state.items=[];state.miners=[];state.nextId=0;
-    state.researched=new Set();state.unlocked=new Set(['compiler','qa_gate','sm36','oss']);
+    state.researched=new Set();state.unlocked=new Set(['compiler','qa_gate','sm36','oss','inc_triage','prb_analyst']);
     state.rp=0;state.rpMilestonesHit=new Set();
     state.beltTickMs=1000;state.hanaCloudMult=1.0;
     state.splitterCtrs={};state.rpmHistory=new Array(60).fill(0);state.rpmTick=0;
@@ -839,6 +877,15 @@ const game = (() => {
     if(k==='i'){selectTool('oss');return;}
     if(k==='o'){selectTool('bw_dtp');return;}
     if(k==='f'){selectTool('splitter');return;}
+    if(k==='g'){selectTool('inc_triage');return;}
+    if(k==='h'){selectTool('inc_resolver');return;}
+    if(k==='j'){selectTool('inc_closer');return;}
+    if(k==='n'){selectTool('prb_analyst');return;}
+    if(k==='m'){selectTool('prb_rootcause');return;}
+    if(k===','){selectTool('prb_change');return;}
+    if(k==='v'){selectTool('chg_impact');return;}
+    if(k==='k'){selectTool('chg_cab');return;}
+    if(k===';'){selectTool('chg_deploy');return;}
   });
 
   // ── RANDOM EVENTS ─────────────────────────────────────────────────────────

@@ -867,6 +867,19 @@ body:not(.light) #grid-wrapper {
 }
 @keyframes bwdtp-p { 0%,100%{box-shadow:inset 0 0 10px #6020b055;} 50%{box-shadow:inset 0 0 24px #9040d099,0 0 14px #6020b044;} }
 
+/* ===== ORE-SPECIFIC PIPELINE TILES ===== */
+.t-inc_triage   { background:#05101e; border:2px solid #1a4080 !important; color:#6090e0; font-size:.8rem; animation:comp-p 1.2s ease-in-out infinite; }
+.t-inc_resolver { background:#071420; border:2px solid #2060a0 !important; color:#70a8f0; font-size:.8rem; animation:comp-p 1.5s ease-in-out infinite; }
+.t-inc_closer   { background:#051828; border:2px solid #0050b0 !important; color:#50c0ff; font-size:.8rem; animation:comp-p .9s ease-in-out infinite; }
+
+.t-prb_analyst  { background:#1e0c00; border:2px solid #804020 !important; color:#e08040; font-size:.8rem; animation:oss-p 1.4s ease-in-out infinite; }
+.t-prb_rootcause{ background:#240e00; border:2px solid #a04820 !important; color:#f0a060; font-size:.8rem; animation:oss-p 1.7s ease-in-out infinite; }
+.t-prb_change   { background:#1c0a00; border:2px solid #903010 !important; color:#ff8040; font-size:.8rem; animation:oss-p 1.1s ease-in-out infinite; }
+
+.t-chg_impact   { background:#120828; border:2px solid #601890 !important; color:#b060e0; font-size:.8rem; animation:cb-p 1.6s ease-in-out infinite; }
+.t-chg_cab      { background:#180a30; border:2px solid #802098 !important; color:#c070f0; font-size:.8rem; animation:cb-p 2.0s ease-in-out infinite; }
+.t-chg_deploy   { background:#0a0420; border:2px solid #5010a0 !important; color:#9040ff; font-size:.8rem; animation:cb-p 1.0s ease-in-out infinite; }
+
 /* Build menu section label */
 .bm-section-label {
   font-size:.5rem; font-weight:700; text-transform:uppercase; letter-spacing:.1em;

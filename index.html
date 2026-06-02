@@ -284,14 +284,80 @@
                 <button class="bm-close" onclick="game.closeBuildMenu()">✕</button>
             </div>
             <div id="bm-tabs">
-                <button class="bm-tab bm-tab-active" data-tab="production" onclick="game.bmTab('production')">⚙ Production</button>
+                <button class="bm-tab bm-tab-active" data-tab="pipelines" onclick="game.bmTab('pipelines')">🔧 Pipelines</button>
+                <button class="bm-tab" data-tab="production" onclick="game.bmTab('production')">⚙ Production</button>
                 <button class="bm-tab" data-tab="logistics" onclick="game.bmTab('logistics')">▶ Logistics</button>
                 <button class="bm-tab" data-tab="infra" onclick="game.bmTab('infra')">🏭 Infrastructure</button>
                 <button class="bm-tab" data-tab="auto" onclick="game.bmTab('auto')">🤖 Automation</button>
             </div>
 
+            <!-- PIPELINES -->
+            <div class="bm-tab-body hidden" id="bmt-pipelines">
+                <div class="bm-section-label">🔵 INC Pipeline — Incident</div>
+                <div class="bm-items">
+                    <div class="bm-item" data-tool="inc_triage" data-cost="150" onclick="game.selectTool('inc_triage')">
+                        <kbd class="bm-key">G</kbd><div class="bm-icon">🔵</div>
+                        <div class="bm-info"><span class="bm-name">INC Triage</span><span class="bm-desc">INC RAW→TR · 1s · 150 CZK</span></div>
+                        <div class="bm-right"><span class="bm-cost">150 CZK</span></div>
+                    </div>
+                    <div class="bm-item bm-locked" data-tool="inc_resolver" data-cost="300" id="bm-inc-resolver" onclick="game.selectTool('inc_resolver')">
+                        <kbd class="bm-key">H</kbd><div class="bm-icon">🔄</div>
+                        <div class="bm-info"><span class="bm-name">INC Resolver</span><span class="bm-desc">INC TR→QA✓ · 2s · 5 RP</span></div>
+                        <div class="bm-right"><span class="bm-cost bm-lock-cost">🔒 5 RP</span></div>
+                    </div>
+                    <div class="bm-item bm-locked" data-tool="inc_closer" data-cost="600" id="bm-inc-closer" onclick="game.selectTool('inc_closer')">
+                        <kbd class="bm-key">J</kbd><div class="bm-icon">✅</div>
+                        <div class="bm-info"><span class="bm-name">INC Auto-Closer</span><span class="bm-desc">INC QA✓→CR✓ · 1s · 50 RP</span></div>
+                        <div class="bm-right"><span class="bm-cost bm-lock-cost">🔒 50 RP</span></div>
+                    </div>
+                </div>
+                <div class="bm-section-label">🔶 PRB Pipeline — Problem</div>
+                <div class="bm-items">
+                    <div class="bm-item" data-tool="prb_analyst" data-cost="400" onclick="game.selectTool('prb_analyst')">
+                        <kbd class="bm-key">N</kbd><div class="bm-icon">🔶</div>
+                        <div class="bm-info"><span class="bm-name">PRB Analyst</span><span class="bm-desc">PRB RAW→TR · 2s · 400 CZK</span></div>
+                        <div class="bm-right"><span class="bm-cost">400 CZK</span></div>
+                    </div>
+                    <div class="bm-item bm-locked" data-tool="prb_rootcause" data-cost="800" id="bm-prb-rootcause" onclick="game.selectTool('prb_rootcause')">
+                        <kbd class="bm-key">M</kbd><div class="bm-icon">🔍</div>
+                        <div class="bm-info"><span class="bm-name">Root Cause Analysis</span><span class="bm-desc">PRB TR→QA✓ · 3s · 20 RP</span></div>
+                        <div class="bm-right"><span class="bm-cost bm-lock-cost">🔒 20 RP</span></div>
+                    </div>
+                    <div class="bm-item bm-locked" data-tool="prb_change" data-cost="1200" id="bm-prb-change" onclick="game.selectTool('prb_change')">
+                        <kbd class="bm-key">,</kbd><div class="bm-icon">🔀</div>
+                        <div class="bm-info"><span class="bm-name">PRB→Change Converter</span><span class="bm-desc">PRB QA✓→CR✓ · 2s · 100 RP</span></div>
+                        <div class="bm-right"><span class="bm-cost bm-lock-cost">🔒 100 RP</span></div>
+                    </div>
+                </div>
+                <div class="bm-section-label">🔮 CHG Pipeline — Change</div>
+                <div class="bm-items">
+                    <div class="bm-item bm-locked" data-tool="chg_impact" data-cost="800" id="bm-chg-impact" onclick="game.selectTool('chg_impact')">
+                        <kbd class="bm-key">V</kbd><div class="bm-icon">🔮</div>
+                        <div class="bm-info"><span class="bm-name">CHG Impact Analyzer</span><span class="bm-desc">CHG RAW→TR · 3s · 20 RP</span></div>
+                        <div class="bm-right"><span class="bm-cost bm-lock-cost">🔒 20 RP</span></div>
+                    </div>
+                    <div class="bm-item bm-locked" data-tool="chg_cab" data-cost="1500" id="bm-chg-cab" onclick="game.selectTool('chg_cab')">
+                        <kbd class="bm-key">K</kbd><div class="bm-icon">📋</div>
+                        <div class="bm-info"><span class="bm-name">CHG CAB Review</span><span class="bm-desc">CHG TR→CR✓ · 4s · 100 RP</span></div>
+                        <div class="bm-right"><span class="bm-cost bm-lock-cost">🔒 100 RP</span></div>
+                    </div>
+                    <div class="bm-item bm-locked" data-tool="chg_deploy" data-cost="2500" id="bm-chg-deploy" onclick="game.selectTool('chg_deploy')">
+                        <kbd class="bm-key">;</kbd><div class="bm-icon">🚀</div>
+                        <div class="bm-info"><span class="bm-name">CHG Emergency Deploy</span><span class="bm-desc">CHG CR✓→HANA · 2s · 300 RP</span></div>
+                        <div class="bm-right"><span class="bm-cost bm-lock-cost">🔒 300 RP</span></div>
+                    </div>
+                </div>
+                <div class="bm-milestone">
+                    <div class="bm-ms-item"><span>🔓 5 RP:</span><span>INC Resolver</span></div>
+                    <div class="bm-ms-item"><span>🔓 20 RP:</span><span>PRB Root Cause + CHG Impact</span></div>
+                    <div class="bm-ms-item"><span>🔓 50 RP:</span><span>Change Board + INC Closer</span></div>
+                    <div class="bm-ms-item"><span>🔓 100 RP:</span><span>PRB→Change + CHG CAB</span></div>
+                    <div class="bm-ms-item"><span>🔓 300 RP:</span><span>CHG Emergency Deploy</span></div>
+                </div>
+            </div>
+
             <!-- PRODUCTION -->
-            <div class="bm-tab-body" id="bmt-production">
+            <div class="bm-tab-body hidden" id="bmt-production">
                 <div class="bm-items">
                     <div class="bm-item" data-tool="miner" data-cost="80" onclick="game.selectTool('miner')">
                         <kbd class="bm-key">Q</kbd><div class="bm-icon">⛏</div>
