@@ -101,7 +101,7 @@
                             <div class="rg-row"><span>✔ QA Gate → QA✓</span><span>157 CZK</span></div>
                             <div class="rg-row"><span>📋 Change Board → CR✓</span><span>240 CZK</span></div>
                             <div class="rg-row rg-best"><span>🗄 HANA DB → HANA ★</span><span>360 CZK</span></div>
-                            <div class="rg-tip">💡 Nejvíce ore, ideální pro R&D Lab a raný budget</div>
+                            <div class="rg-tip">💡 ⏱ SM36 Scheduler: INC ×1.5 · 📝 OSS ×1.5 · 📊 BW DTP ×2.0</div>
                         </div>
                     </details>
                     <details class="rg-ore prb">
@@ -112,7 +112,7 @@
                             <div class="rg-row"><span>✔ QA Gate → QA✓</span><span>420 CZK</span></div>
                             <div class="rg-row"><span>📋 Change Board → CR✓</span><span>640 CZK</span></div>
                             <div class="rg-row rg-best"><span>🗄 HANA DB → HANA ★</span><span>960 CZK</span></div>
-                            <div class="rg-tip">💡 Nejlepší RP/CZK poměr — routuj do R&D po QA</div>
+                            <div class="rg-tip">💡 🚌 STMS Router: PRB ×1.7 · 📝 OSS ×1.5 · 📊 BW DTP ×2.0</div>
                         </div>
                     </details>
                     <details class="rg-ore chg">
@@ -123,7 +123,7 @@
                             <div class="rg-row"><span>✔ QA Gate → QA✓</span><span>1050 CZK</span></div>
                             <div class="rg-row"><span>📋 Change Board → CR✓</span><span>1600 CZK</span></div>
                             <div class="rg-row rg-best"><span>🗄 HANA DB → HANA ★</span><span>2400 CZK</span></div>
-                            <div class="rg-tip">💡 Vzácné ale výnosné — postav dedikovanou linku</div>
+                            <div class="rg-tip">💡 📝 OSS ×1.5 · 📊 BW DTP ×2.0 · plná pipeline = 2400 CZK</div>
                         </div>
                     </details>
                 </div>
@@ -140,6 +140,10 @@
                     <div class="price-r"><span>🗄 HANA DB</span><b>300</b></div>
                     <div class="price-r"><span>🏭 PRD Station</span><b>250</b></div>
                     <div class="price-r"><span>🔬 R&amp;D Lab</span><b>400</b></div>
+                    <div class="price-r"><span>⏱ SM36 Scheduler</span><b>200</b></div>
+                    <div class="price-r"><span>🚌 STMS Router</span><b>300</b></div>
+                    <div class="price-r"><span>📝 OSS Scanner</span><b>280</b></div>
+                    <div class="price-r"><span>📊 BW DTP</span><b>500</b></div>
                     <div class="price-r"><span>❌ Delete</span><b>free</b></div>
                 </div>
             </div>
@@ -296,6 +300,27 @@
                         <kbd class="bm-key">L</kbd><div class="bm-icon">🔬</div>
                         <div class="bm-info"><span class="bm-name">R&amp;D Lab</span><span class="bm-desc">Konvertuje TR → Research Points</span></div>
                         <div class="bm-right"><span class="bm-cost">400 CZK</span></div>
+                    </div>
+                    <div class="bm-section-label">⚡ BC / BW Processing</div>
+                    <div class="bm-item" data-cost="200" onclick="game.selectTool('sm36')">
+                        <kbd class="bm-key">Z</kbd><div class="bm-icon">⏱</div>
+                        <div class="bm-info"><span class="bm-name">SM36 Scheduler</span><span class="bm-desc">INC ×1.5 · ostatní ×1.1 · BG Jobs</span></div>
+                        <div class="bm-right"><span class="bm-cost">200 CZK</span></div>
+                    </div>
+                    <div class="bm-item bm-locked" data-cost="300" id="bm-stms" onclick="game.selectTool('stms')">
+                        <kbd class="bm-key">U</kbd><div class="bm-icon">🚌</div>
+                        <div class="bm-info"><span class="bm-name">STMS Router</span><span class="bm-desc">PRB ×1.7 · ostatní ×1.1 · Transport Mgmt</span></div>
+                        <div class="bm-right"><span class="bm-cost bm-lock-cost">🔒 150 RP</span></div>
+                    </div>
+                    <div class="bm-item" data-cost="280" onclick="game.selectTool('oss')">
+                        <kbd class="bm-key">I</kbd><div class="bm-icon">📝</div>
+                        <div class="bm-info"><span class="bm-name">OSS Note Scanner</span><span class="bm-desc">ALL ore ×1.5 · SAP Notes applikace</span></div>
+                        <div class="bm-right"><span class="bm-cost">280 CZK</span></div>
+                    </div>
+                    <div class="bm-item bm-locked" data-cost="500" id="bm-bw-dtp" onclick="game.selectTool('bw_dtp')">
+                        <kbd class="bm-key">O</kbd><div class="bm-icon">📊</div>
+                        <div class="bm-info"><span class="bm-name">BW DTP Processor</span><span class="bm-desc">ALL ore ×2.0 · BW Data Transfer</span></div>
+                        <div class="bm-right"><span class="bm-cost bm-lock-cost">🔒 300 RP</span></div>
                     </div>
                 </div>
             </div>

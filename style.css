@@ -832,6 +832,38 @@ body:not(.light) #grid-wrapper {
   font-family: var(--mono); color: var(--blue2);
 }
 
+/* ===== BC / BW TILES ===== */
+.t-sm36 {
+  background:#061828; border:2px solid #1a5090 !important; color:#70b0f0; font-size:.85rem;
+  animation:sm36-p 1.3s ease-in-out infinite;
+}
+@keyframes sm36-p { 0%,100%{box-shadow:inset 0 0 8px #1a509044;} 50%{box-shadow:inset 0 0 20px #3080d088,0 0 10px #1a509033;} }
+
+.t-stms {
+  background:#041c1c; border:2px solid #0a7070 !important; color:#20d0d0; font-size:.85rem;
+  animation:stms-p 1.5s ease-in-out infinite;
+}
+@keyframes stms-p { 0%,100%{box-shadow:inset 0 0 8px #0a707044;} 50%{box-shadow:inset 0 0 20px #20c0c088,0 0 10px #0a707033;} }
+
+.t-oss {
+  background:#1c1004; border:2px solid #806020 !important; color:#f0b840; font-size:.85rem;
+  animation:oss-p 1.8s ease-in-out infinite;
+}
+@keyframes oss-p { 0%,100%{box-shadow:inset 0 0 8px #80602044;} 50%{box-shadow:inset 0 0 20px #d0a04088,0 0 10px #80602033;} }
+
+.t-bw_dtp {
+  background:#140820; border:2px solid #6020b0 !important; color:#c070f0; font-size:.85rem;
+  animation:bwdtp-p 1.1s ease-in-out infinite;
+}
+@keyframes bwdtp-p { 0%,100%{box-shadow:inset 0 0 10px #6020b055;} 50%{box-shadow:inset 0 0 24px #9040d099,0 0 14px #6020b044;} }
+
+/* Build menu section label */
+.bm-section-label {
+  font-size:.5rem; font-weight:700; text-transform:uppercase; letter-spacing:.1em;
+  color:var(--dim2); padding:7px 12px 3px;
+  border-top:1px solid var(--border); margin-top:2px;
+}
+
 /* ===== R&D LAB TILE ===== */
 .t-rnd {
   background:#051e18; border:2px solid #0a5a40 !important; color:#00e87a; font-size:.95rem;
