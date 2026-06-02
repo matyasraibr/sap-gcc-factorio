@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="cs">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SAP GCC Factorio – Škoda Auto</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+
+    <!-- ── TITLE SCREEN ──────────────────────────────────────────────────────── -->
+    <div id="title-overlay">
+        <div id="title-bg"></div>
+
+        <div id="title-content">
+            <div id="title-logo">⬡</div>
+            <h1 id="title-name">SAP GCC Factorio</h1>
+            <div id="title-tagline">Škoda Auto a.s. &nbsp;·&nbsp; Transport Factory Simulator</div>
+            <div id="title-edition">Hackathon Edition 2026</div>
+
+            <button id="title-new-btn" onclick="game.titleNewGame()">
+        ▶&ensp;Nová hra
+      </button>
+
+            <div id="title-continue-head">
+                <span class="tch-line"></span>
+                <span>Pokračovat v uložené hře</span>
+                <span class="tch-line"></span>
+            </div>
+            <div id="title-slots"></div>
+
+            <div id="title-hint">
+                <kbd>Esc</kbd> menu &emsp; <kbd>Ctrl+S</kbd> save &emsp; <kbd>B</kbd> build &emsp; <kbd>WASD</kbd>/<kbd>↑↓←→</kbd> belts &emsp; <kbd>Q-Y</kbd><kbd>P</kbd><kbd>L</kbd><kbd>X</kbd> tools
+            </div>
+        </div>
+    </div>
+
+    <header id="topbar">
+        <div id="topbar-left">
+            <span class="brand-icon">⬡</span>
+            <div>
+                <div class="brand">SAP GCC Factorio</div>
+                <div class="subtitle">Škoda Auto a.s. — Transport Factory Simulator</div>
+            </div>
+        </div>
+        <div id="topbar-stats">
+            <div class="stat-chip chip-budget"><span class="stat-label">Budget</span><span class="stat-value" id="stat-budget">500 CZK</span></div>
+            <div class="stat-chip"><span class="stat-label">Items</span><span class="stat-value" id="stat-queue">0</span></div>
+            <div class="stat-chip" id="chip-bugs"><span class="stat-label">Belt/Proc</span><span class="stat-value" id="stat-bugs">0/0</span></div>
+            <div class="stat-chip"><span class="stat-label">Minerů</span><span class="stat-value" id="stat-raw">0 ⛏</span></div>
+            <div class="stat-chip chip-rp"><span class="stat-label">RP</span><span class="stat-value" id="stat-rp">0 RP</span></div>
+        </div>
+        <button id="theme-btn" onclick="game.toggleTheme()">☀ Light</button>
+        <button id="topbar-menu-btn" onclick="game.openMenu()">≡ Menu</button>
+    </header>
+
+    <div id="layout">
+
+        <!-- ── LEFT PANEL ─────────────────────────────────────────────────────── -->
+        <aside id="panel-left">
+
+            <div class="collapsible open" id="col-ore">
+                <button class="section-head" onclick="toggleSection(this)">Ore typy <span class="sh-arr">▼</span></button>
+                <div class="sec-body">
+                    <div class="ore-card inc">
+                        <div class="ore-dot"></div>
+                        <div><b>INC</b> Incident<br><small>50 CZK base</small></div>
+                    </div>
+                    <div class="ore-card prb">
+                        <div class="ore-dot"></div>
+                        <div><b>PRB</b> Problem<br><small>150 CZK base</small></div>
+                    </div>
+                    <div class="ore-card chg">
+                        <div class="ore-dot"></div>
+                        <div><b>CHG</b> Change<br><small>400 CZK base</small></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="collapsible open" id="col-stages">
+                <button class="section-head" onclick="toggleSection(this)">Pipeline stages <span class="sh-arr">▼</span></button>
+                <div class="sec-body">
+                    <div class="stage-chip st0"><span class="sc-tag">RAW</span><span class="sc-mult">×1.0</span></div>
+                    <div class="stage-chip st1"><span class="sc-tag">TR</span><span class="sc-mult">×1.5</span><small>⚙ Compiler</small></div>
+                    <div class="stage-chip st2"><span class="sc-tag">QA✓</span><span class="sc-mult">×2.1</span><small>✔ QA Gate</small></div>
+                    <div class="stage-chip st3"><span class="sc-tag">CR✓</span><span class="sc-mult">×3.2</span><small>📋 Change Board</small></div>
+                    <div class="stage-chip st4"><span class="sc-tag">HANA</span><span class="sc-mult">×4.8</span><small>🗄 HANA DB</small></div>
+                </div>
+            </div>
+
+            <div class="collapsible" id="col-prices">
+                <button class="section-head" onclick="toggleSection(this)">Ceny <span class="sh-arr">▼</span></button>
+                <div class="sec-body">
+                    <div class="price-r"><span>⛏ Miner</span><b>100</b></div>
+                    <div class="price-r"><span>▶ Belt</span><b>5</b></div>
+                    <div class="price-r"><span>⚙ Compiler</span><b>150</b></div>
+                    <div class="price-r"><span>✔ QA Gate</span><b>100</b></div>
+                    <div class="price-r"><span>📋 Change Board</span><b>200</b></div>
+                    <div class="price-r"><span>🗄 HANA DB</span><b>350</b></div>
+                    <div class="price-r"><span>🏭 PRD Station</span><b>400</b></div>
+                    <div class="price-r"><span>🔬 R&amp;D Lab</span><b>500</b></div>
+                    <div class="price-r"><span>❌ Delete</span><b>free</b></div>
+                </div>
+            </div>
+
+            <div class="collapsible open" id="col-log">
+                <button class="section-head" onclick="toggleSection(this)">Log <span class="sh-arr">▼</span></button>
+                <div class="sec-body">
+                    <div id="log-panel"></div>
+                </div>
+            </div>
+
+        </aside>
+
+        <!-- ── CENTER ─────────────────────────────────────────────────────────── -->
+        <main id="game-field">
+
+            <div id="field-header">
+                <span id="tool-hint">Vyber nástroj níže a klikni na mapu</span>
+                <span id="build-menu-hint"><kbd>B</kbd> Build Menu</span>
+            </div>
+
+            <div id="grid-wrapper">
+                <div id="game-grid"></div>
+            </div>
+
+            <div id="status-bar">
+                <span id="status-tool">⛏ Miner selected</span>
+                <span class="status-keys"><kbd>B</kbd> catalogue &nbsp;·&nbsp; <kbd>Q-Y</kbd><kbd>P</kbd><kbd>L</kbd><kbd>X</kbd> tools &nbsp;·&nbsp; <kbd>WASD</kbd>/<kbd>↑↓←→</kbd> belts</span>
+            </div>
+
+            <div id="event-banner" class="hidden"></div>
+        </main>
+
+        <!-- ── RIGHT PANEL ────────────────────────────────────────────────────── -->
+        <aside id="panel-right">
+
+            <div class="collapsible open" id="col-metrics">
+                <button class="section-head" onclick="toggleSection(this)">Metriky <span class="sh-arr">▼</span></button>
+                <div class="sec-body">
+                    <div id="metrics-grid">
+                        <div class="mg"><span class="mg-v" id="m-bps">0</span><span class="mg-l">CZK/tick</span></div>
+                        <div class="mg"><span class="mg-v" id="m-deploys">0</span><span class="mg-l">Deploye</span></div>
+                        <div class="mg"><span class="mg-v" id="m-miners">0</span><span class="mg-l">Minerů</span></div>
+                        <div class="mg"><span class="mg-v" id="m-procs">0</span><span class="mg-l">Budov</span></div>
+                        <div class="mg"><span class="mg-v" id="m-items">0</span><span class="mg-l">Items</span></div>
+                        <div class="mg"><span class="mg-v" id="m-mult">×1.0</span><span class="mg-l">Mult</span></div>
+                        <div class="mg" style="grid-column:span 2"><span class="mg-v" id="m-int">3s / ×1</span><span class="mg-l">Mining / Belt</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="collapsible open" id="col-research">
+                <button class="section-head" onclick="toggleSection(this)">⚗ Výzkum (14 uzlů) <span class="sh-arr">▼</span></button>
+                <div class="sec-body">
+                    <div class="res-tier-label">Tier 0 — dostupné</div>
+                    <div id="research-list"></div>
+                </div>
+            </div>
+
+            <div class="collapsible open" id="col-events">
+                <button class="section-head" onclick="toggleSection(this)">Události <span class="sh-arr">▼</span></button>
+                <div class="sec-body">
+                    <div id="event-log"></div>
+                </div>
+            </div>
+
+        </aside>
+
+    </div>
+
+    <!-- ── MENU OVERLAY ─────────────────────────────────────────────────────── -->
+    <div id="menu-overlay" class="hidden">
+        <div id="menu-card">
+
+            <div id="menu-header">
+                <span class="menu-logo">⬡</span>
+                <div class="menu-title-block">
+                    <div class="menu-title">SAP GCC Factorio</div>
+                    <div class="menu-sub">Škoda Auto a.s. — Pause Menu</div>
+                </div>
+                <button class="menu-x" onclick="game.closeMenu()" title="Zavřít (Esc)">✕</button>
+            </div>
+
+            <div id="menu-gameinfo">
+                <div class="gi"><span class="gi-icon">💰</span><span class="gi-val" id="mi-budget">—</span></div>
+                <div class="gi"><span class="gi-icon">🚀</span><span class="gi-val" id="mi-deploys">—</span></div>
+                <div class="gi"><span class="gi-icon">🔬</span><span class="gi-val" id="mi-research">—</span></div>
+                <div class="gi"><span class="gi-icon">⛏</span><span class="gi-val" id="mi-miners">—</span></div>
+            </div>
+
+            <button class="menu-action primary" onclick="game.closeMenu()">
+        <span>▶ Pokračovat</span><kbd>Esc</kbd>
+      </button>
+
+            <div class="menu-divider">💾 Uložit / Načíst</div>
+            <div id="save-slots"></div>
+
+            <div class="menu-divider"></div>
+            <button class="menu-action danger" onclick="game.newGame()">🔄 Nová hra</button>
+
+            <div class="menu-shortcuts">
+                <span><kbd>Esc</kbd> menu</span>
+                <span><kbd>Ctrl+S</kbd> save</span>
+                <span><kbd>B</kbd> build · <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> buy</span>
+                <span><kbd>Q</kbd>–<kbd>Y</kbd> <kbd>X</kbd> tools</span>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ── BUILD MENU MODAL ──────────────────────────────────────────────────── -->
+    <div id="build-menu-modal" class="hidden" onclick="event.target===this&&game.closeBuildMenu()">
+        <div id="bm-panel">
+            <div id="bm-header">
+                <span class="bm-title">🏗 SAP Blueprint Catalogue</span>
+                <button class="bm-close" onclick="game.closeBuildMenu()">✕</button>
+            </div>
+            <div id="bm-tabs">
+                <button class="bm-tab bm-tab-active" data-tab="production" onclick="game.bmTab('production')">⚙ Production</button>
+                <button class="bm-tab" data-tab="logistics" onclick="game.bmTab('logistics')">▶ Logistics</button>
+                <button class="bm-tab" data-tab="infra" onclick="game.bmTab('infra')">🏭 Infrastructure</button>
+                <button class="bm-tab" data-tab="auto" onclick="game.bmTab('auto')">🤖 Automation</button>
+            </div>
+
+            <!-- PRODUCTION -->
+            <div class="bm-tab-body" id="bmt-production">
+                <div class="bm-items">
+                    <div class="bm-item" data-cost="100" onclick="game.selectTool('miner')">
+                        <kbd class="bm-key">Q</kbd><div class="bm-icon">⛏</div>
+                        <div class="bm-info"><span class="bm-name">Miner</span><span class="bm-desc">Těží ore patch · každé 3s</span></div>
+                        <div class="bm-right"><span class="bm-cost">100 CZK</span></div>
+                    </div>
+                    <div class="bm-item" data-cost="150" onclick="game.selectTool('compiler')">
+                        <kbd class="bm-key">E</kbd><div class="bm-icon">⚙</div>
+                        <div class="bm-info"><span class="bm-name">ABAP Compiler</span><span class="bm-desc">RAW → TR · ×1.5</span></div>
+                        <div class="bm-right"><span class="bm-cost">150 CZK</span></div>
+                    </div>
+                    <div class="bm-item" data-cost="100" onclick="game.selectTool('qa_gate')">
+                        <kbd class="bm-key">R</kbd><div class="bm-icon">✔</div>
+                        <div class="bm-info"><span class="bm-name">QA Gate</span><span class="bm-desc">TR → QA✓ · ×2.1</span></div>
+                        <div class="bm-right"><span class="bm-cost">100 CZK</span></div>
+                    </div>
+                    <div class="bm-item bm-locked" data-cost="200" id="bm-change-board" onclick="game.selectTool('change_board')">
+                        <kbd class="bm-key">T</kbd><div class="bm-icon">📋</div>
+                        <div class="bm-info"><span class="bm-name">Change Board</span><span class="bm-desc">QA✓ → CR✓ · ×3.2</span></div>
+                        <div class="bm-right"><span class="bm-cost bm-lock-cost">🔒 50 RP</span></div>
+                    </div>
+                    <div class="bm-item bm-locked" data-cost="350" id="bm-hana-db" onclick="game.selectTool('hana_db')">
+                        <kbd class="bm-key">Y</kbd><div class="bm-icon">🗄</div>
+                        <div class="bm-info"><span class="bm-name">HANA DB</span><span class="bm-desc">CR✓ → HANA · ×4.8</span></div>
+                        <div class="bm-right"><span class="bm-cost bm-lock-cost">🔒 400 RP</span></div>
+                    </div>
+                    <div class="bm-item" data-cost="500" onclick="game.selectTool('rnd')">
+                        <kbd class="bm-key">L</kbd><div class="bm-icon">🔬</div>
+                        <div class="bm-info"><span class="bm-name">R&amp;D Lab</span><span class="bm-desc">Konvertuje TR → Research Points</span></div>
+                        <div class="bm-right"><span class="bm-cost">500 CZK</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LOGISTICS -->
+            <div class="bm-tab-body hidden" id="bmt-logistics">
+                <div class="bm-items bm-items-grid">
+                    <div class="bm-item" data-cost="5" onclick="game.selectTool('b_u')">
+                        <kbd class="bm-key">W/↑</kbd><div class="bm-icon">▲</div>
+                        <div class="bm-info"><span class="bm-name">Belt ↑</span><span class="bm-desc">5 CZK</span></div>
+                    </div>
+                    <div class="bm-item" data-cost="5" onclick="game.selectTool('b_r')">
+                        <kbd class="bm-key">D/→</kbd><div class="bm-icon">▶</div>
+                        <div class="bm-info"><span class="bm-name">Belt →</span><span class="bm-desc">5 CZK</span></div>
+                    </div>
+                    <div class="bm-item" data-cost="5" onclick="game.selectTool('b_d')">
+                        <kbd class="bm-key">S/↓</kbd><div class="bm-icon">▼</div>
+                        <div class="bm-info"><span class="bm-name">Belt ↓</span><span class="bm-desc">5 CZK</span></div>
+                    </div>
+                    <div class="bm-item" data-cost="5" onclick="game.selectTool('b_l')">
+                        <kbd class="bm-key">A/←</kbd><div class="bm-icon">◀</div>
+                        <div class="bm-info"><span class="bm-name">Belt ←</span><span class="bm-desc">5 CZK</span></div>
+                    </div>
+                </div>
+                <div class="bm-milestone"><div class="bm-ms-item"><span>🔓 150 RP:</span><span>Express Belts 2× Speed</span></div></div>
+            </div>
+
+            <!-- INFRASTRUCTURE -->
+            <div class="bm-tab-body hidden" id="bmt-infra">
+                <div class="bm-items">
+                    <div class="bm-item" data-cost="400" onclick="game.selectTool('output')">
+                        <kbd class="bm-key">P</kbd><div class="bm-icon">🏭</div>
+                        <div class="bm-info"><span class="bm-name">PRD Deploy Station</span><span class="bm-desc">Prodej TRek → Budget CZK</span></div>
+                        <div class="bm-right"><span class="bm-cost">400 CZK</span></div>
+                    </div>
+                    <div class="bm-item" data-cost="0" onclick="game.selectTool('delete')">
+                        <kbd class="bm-key">X</kbd><div class="bm-icon">❌</div>
+                        <div class="bm-info"><span class="bm-name">Delete Tool</span><span class="bm-desc">Odstraní budovu nebo belt</span></div>
+                        <div class="bm-right"><span class="bm-cost" style="color:var(--dim2)">Free</span></div>
+                    </div>
+                </div>
+                <div class="bm-milestone">
+                    <div class="bm-ms-item"><span>🔓 50 RP:</span><span>Change Board odemčen</span></div>
+                    <div class="bm-ms-item"><span>🔓 150 RP:</span><span>Express Belts 2×</span></div>
+                    <div class="bm-ms-item"><span>🔓 400 RP:</span><span>HANA DB odemčen</span></div>
+                </div>
+            </div>
+
+            <!-- AUTOMATION -->
+            <div class="bm-tab-body hidden" id="bmt-auto">
+                <div class="bm-items">
+                    <div class="bm-item" data-cost="100" id="bmi-service-desk" onclick="game.purchaseBuilding('service_desk')">
+                        <kbd class="bm-key">1</kbd><div class="bm-icon">🎧</div>
+                        <div class="bm-info"><span class="bm-name">Service Desk</span><span class="bm-desc">Auto-inject INC · každé 3s</span></div>
+                        <div class="bm-right"><span class="bm-cost">100 CZK</span><span class="bm-count" id="bmc-service-desk"></span></div>
+                    </div>
+                    <div class="bm-item" data-cost="300" id="bmi-problem-mgmt" onclick="game.purchaseBuilding('problem_mgmt')">
+                        <kbd class="bm-key">2</kbd><div class="bm-icon">🔧</div>
+                        <div class="bm-info"><span class="bm-name">Problem Management</span><span class="bm-desc">Auto-inject PRB · každé 5s</span></div>
+                        <div class="bm-right"><span class="bm-cost">300 CZK</span><span class="bm-count" id="bmc-problem-mgmt"></span></div>
+                    </div>
+                    <div class="bm-item" data-cost="800" id="bmi-cab" onclick="game.purchaseBuilding('cab')">
+                        <kbd class="bm-key">3</kbd><div class="bm-icon">📋</div>
+                        <div class="bm-info"><span class="bm-name">Change Advisory Board</span><span class="bm-desc">Auto-inject CHG · každé 8s</span></div>
+                        <div class="bm-right"><span class="bm-cost">800 CZK</span><span class="bm-count" id="bmc-cab"></span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bm-footer">
+                <kbd>B</kbd> zavřít &nbsp;·&nbsp; <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> koupit auto &nbsp;·&nbsp; <kbd>Q–Y</kbd><kbd>P</kbd><kbd>L</kbd><kbd>X</kbd> nástroje
+            </div>
+        </div>
+    </div>
+
+    <script src="main.js"></script>
+</body>
+
+</html>
