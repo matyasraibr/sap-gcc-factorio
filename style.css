@@ -459,7 +459,7 @@ body:not(.light) #grid-wrapper {
   position:absolute; width:24px; height:24px;
   border-radius:4px; display:flex; align-items:center; justify-content:center;
   font-size:.5rem; font-weight:800; letter-spacing:.03em; font-family:var(--mono);
-  transition:left .34s cubic-bezier(.4,0,.2,1), top .34s cubic-bezier(.4,0,.2,1);
+  transition:left var(--item-ms,930ms) linear, top var(--item-ms,930ms) linear;
   box-shadow:0 3px 12px rgba(0,0,0,.85), inset 0 1px 0 rgba(255,255,255,.07);
   z-index:20; pointer-events:none;
 }
@@ -888,3 +888,36 @@ body.light .chip-budget { background: #e0eeff; border-color: var(--blue); }
 body.light .stat-chip { background: var(--surface); }
 body.light #topbar-stats .stat-value { color: var(--blue); }
 body.light .chip-budget .stat-value { color: var(--blue); }
+
+/* ===== RESOURCE GUIDE ===== */
+.rg-ore { border-radius:5px; overflow:hidden; margin-bottom:3px; border:1px solid var(--border); }
+.rg-ore summary { list-style:none; }
+.rg-ore summary::-webkit-details-marker { display:none; }
+
+.rg-summary {
+  display:flex; align-items:center; gap:7px;
+  padding:5px 8px; cursor:pointer; font-size:.68rem; font-weight:700;
+  background:var(--surface); color:var(--text);
+  transition:background .12s;
+  user-select:none;
+}
+.rg-summary:hover { background:var(--raised); }
+.rg-ore[open] .rg-summary { border-bottom:1px solid var(--border); }
+.rg-ore.inc .rg-summary { border-left:3px solid #2a6bb8; }
+.rg-ore.prb .rg-summary { border-left:3px solid #c06a00; }
+.rg-ore.chg .rg-summary { border-left:3px solid #8030d8; }
+
+.rg-body { padding:5px 8px 7px; background:var(--bg); display:flex; flex-direction:column; gap:2px; }
+
+.rg-row {
+  display:flex; justify-content:space-between; align-items:center;
+  font-size:.6rem; color:var(--dim); padding:2px 4px; border-radius:3px;
+}
+.rg-row span:last-child { font-family:var(--mono); font-weight:700; color:var(--text); }
+.rg-row.rg-best { background:rgba(0,163,160,.12); }
+.rg-row.rg-best span:last-child { color:var(--teal); }
+
+.rg-tip {
+  font-size:.55rem; color:var(--dim2); margin-top:4px;
+  padding:3px 5px; border-left:2px solid var(--border2); font-style:italic;
+}

@@ -32,9 +32,9 @@ const game = (() => {
   const STAGE_CLS   = ['','s-tr','s-qa','s-cr','s-hana'];
 
   const REQ = {
-    incident: { value:50,  icon:'INC', cls:'item-inc' },
-    problem:  { value:150, icon:'PRB', cls:'item-prb' },
-    change:   { value:400, icon:'CHG', cls:'item-chg' },
+    incident: { value:75,  icon:'INC', cls:'item-inc' },
+    problem:  { value:200, icon:'PRB', cls:'item-prb' },
+    change:   { value:500, icon:'CHG', cls:'item-chg' },
   };
 
   const PROC_CFG = {
@@ -45,7 +45,7 @@ const game = (() => {
   };
 
   const PROC_DEFAULTS = { compiler:2, qa_gate:1, change_board:3, hana_db:2 };
-  const COSTS = { miner:100, belt:5, compiler:150, qa_gate:100, change_board:200, hana_db:350, output:400, rnd:500 };
+  const COSTS = { miner:80, belt:4, compiler:120, qa_gate:80, change_board:180, hana_db:300, output:250, rnd:400 };
   const BELT_CYCLE = ['b_r','b_d','b_u','b_l'];
   const HOTKEYS = {'1':'miner','2':'b_r','3':'compiler','4':'qa_gate','5':'change_board','6':'hana_db','x':'delete'};
 
@@ -107,7 +107,7 @@ const game = (() => {
 
   // ── STATE ──────────────────────────────────────────────────────────────────
   const state = {
-    budget:1000, totalDeploys:0, tickBudget:0,
+    budget:1500, totalDeploys:0, tickBudget:0,
     grid:genMap(), items:[], miners:[],
     tool:'miner', nextId:0, rp:0,
     researched:new Set(), unlocked:new Set(['compiler','qa_gate']),
@@ -637,7 +637,7 @@ const game = (() => {
 
   function newGame(){
     if(!confirm('Začít novou hru? Neuložený postup bude ztracen.'))return;
-    state.budget=1000;state.totalDeploys=0;state.tickBudget=0;
+    state.budget=1500;state.totalDeploys=0;state.tickBudget=0;
     state.grid=genMap();state.items=[];state.miners=[];state.nextId=0;
     state.researched=new Set();state.unlocked=new Set(['compiler','qa_gate']);
     state.rp=0;state.rpMilestonesHit=new Set();
@@ -771,9 +771,14 @@ const game = (() => {
 
   // ── TICK MANAGEMENT ────────────────────────────────────────────────────────
   let _tickHandle=null;
+  function updateItemTransition(ms){
+    // CSS transition duration slightly under tick interval → items arrive just before next tick
+    document.documentElement.style.setProperty('--item-ms',(Math.round((ms||1000)*0.93))+'ms');
+  }
   function restartTick(ms){
     if(_tickHandle)clearInterval(_tickHandle);
     _tickHandle=setInterval(tick,ms||1000);
+    updateItemTransition(ms||1000);
   }
 
   function toggleTheme(){
