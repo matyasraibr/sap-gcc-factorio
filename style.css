@@ -827,6 +827,7 @@ body:not(.light) #grid-wrapper {
 .bm-item:hover { background: var(--raised); border-color: var(--blue2); }
 .bm-item.bm-dim { opacity: .38; }
 .bm-item.bm-locked { opacity: .32; pointer-events: none; }
+.bm-item.bmi-active { background:var(--blue); border-color:var(--blue2); box-shadow:0 0 8px var(--blue); color:#fff; }
 
 .bm-key {
   background: var(--raised); border: 1px solid var(--border2);
@@ -965,6 +966,7 @@ body.light .hb-slot { background:var(--raised); color:var(--blue); }
 body.light .hb-slot:hover { background:#e0eeff; }
 body.light .hb-slot.active { background:var(--blue); color:#fff; }
 body.light .hb-build-btn { background:var(--raised); color:var(--blue); }
+body.light .bm-item.bmi-active { background:var(--blue); border-color:var(--blue2); color:#fff; }
 
 /* ===== RESOURCE GUIDE ===== */
 .rg-ore { border-radius:5px; overflow:hidden; margin-bottom:3px; border:1px solid var(--border); }
