@@ -170,23 +170,9 @@
                 <div id="game-grid"></div>
             </div>
 
-            <div id="hotbar">
-                <div id="hb-slots">
-                    <div class="hb-slot active" id="hb-miner" data-cost="100" onclick="game.selectTool('miner')"><kbd>Q</kbd><span>⛏</span></div>
-                    <div class="hb-slot" id="hb-b-u" data-cost="5" onclick="game.selectTool('b_u')"><kbd>W</kbd><span>▲</span></div>
-                    <div class="hb-slot" id="hb-b-r" data-cost="5" onclick="game.selectTool('b_r')"><kbd>D</kbd><span>▶</span></div>
-                    <div class="hb-slot" id="hb-b-d" data-cost="5" onclick="game.selectTool('b_d')"><kbd>S</kbd><span>▼</span></div>
-                    <div class="hb-slot" id="hb-b-l" data-cost="5" onclick="game.selectTool('b_l')"><kbd>A</kbd><span>◀</span></div>
-                    <div class="hb-spacer"></div>
-                    <div class="hb-slot" id="hb-compiler" data-cost="150" onclick="game.selectTool('compiler')"><kbd>E</kbd><span>⚙</span></div>
-                    <div class="hb-slot" id="hb-qa-gate" data-cost="100" onclick="game.selectTool('qa_gate')"><kbd>R</kbd><span>✔</span></div>
-                    <div class="hb-slot hb-locked" id="hb-change-board" data-cost="200" onclick="game.selectTool('change_board')"><kbd>T</kbd><span>📋</span></div>
-                    <div class="hb-slot hb-locked" id="hb-hana-db" data-cost="350" onclick="game.selectTool('hana_db')"><kbd>Y</kbd><span>🗄</span></div>
-                    <div class="hb-spacer"></div>
-                    <div class="hb-slot" id="hb-delete" data-cost="0" onclick="game.selectTool('delete')"><kbd>X</kbd><span>❌</span></div>
-                    <div class="hb-spacer"></div>
-                    <button id="hb-build-btn" class="hb-build-btn" onclick="game.toggleBuildMenu()"><kbd>B</kbd> Katalog</button>
-                </div>
+            <div id="status-bar">
+                <span id="status-tool">⛏ Miner selected</span>
+                <span class="status-keys"><kbd>B</kbd> catalogue &nbsp;·&nbsp; <kbd>Q-Y</kbd><kbd>P</kbd><kbd>L</kbd><kbd>X</kbd> tools &nbsp;·&nbsp; <kbd>WASD</kbd>/<kbd>↑↓←→</kbd> belts</span>
             </div>
 
             <div id="event-banner" class="hidden"></div>
@@ -287,53 +273,53 @@
             <!-- PRODUCTION -->
             <div class="bm-tab-body" id="bmt-production">
                 <div class="bm-items">
-                    <div class="bm-item" data-tool="miner" data-cost="80" onclick="game.selectTool('miner')">
+                    <div class="bm-item" data-cost="80" onclick="game.selectTool('miner')">
                         <kbd class="bm-key">Q</kbd><div class="bm-icon">⛏</div>
                         <div class="bm-info"><span class="bm-name">Miner</span><span class="bm-desc">Těží ore patch · každé 3s</span></div>
                         <div class="bm-right"><span class="bm-cost">80 CZK</span></div>
                     </div>
-                    <div class="bm-item" data-tool="compiler" data-cost="120" onclick="game.selectTool('compiler')">
+                    <div class="bm-item" data-cost="120" onclick="game.selectTool('compiler')">
                         <kbd class="bm-key">E</kbd><div class="bm-icon">⚙</div>
                         <div class="bm-info"><span class="bm-name">ABAP Compiler</span><span class="bm-desc">RAW → TR · ×1.5</span></div>
                         <div class="bm-right"><span class="bm-cost">120 CZK</span></div>
                     </div>
-                    <div class="bm-item" data-tool="qa_gate" data-cost="80" onclick="game.selectTool('qa_gate')">
+                    <div class="bm-item" data-cost="80" onclick="game.selectTool('qa_gate')">
                         <kbd class="bm-key">R</kbd><div class="bm-icon">✔</div>
                         <div class="bm-info"><span class="bm-name">QA Gate</span><span class="bm-desc">TR → QA✓ · ×2.1</span></div>
                         <div class="bm-right"><span class="bm-cost">80 CZK</span></div>
                     </div>
-                    <div class="bm-item bm-locked" data-lock="change_board" data-tool="change_board" data-cost="180" id="bm-change-board" onclick="game.selectTool('change_board')">
+                    <div class="bm-item bm-locked" data-cost="180" id="bm-change-board" onclick="game.selectTool('change_board')">
                         <kbd class="bm-key">T</kbd><div class="bm-icon">📋</div>
                         <div class="bm-info"><span class="bm-name">Change Board</span><span class="bm-desc">QA✓ → CR✓ · ×3.2</span></div>
                         <div class="bm-right"><span class="bm-cost bm-lock-cost">🔒 50 RP</span></div>
                     </div>
-                    <div class="bm-item bm-locked" data-lock="hana_db" data-tool="hana_db" data-cost="300" id="bm-hana-db" onclick="game.selectTool('hana_db')">
+                    <div class="bm-item bm-locked" data-cost="300" id="bm-hana-db" onclick="game.selectTool('hana_db')">
                         <kbd class="bm-key">Y</kbd><div class="bm-icon">🗄</div>
                         <div class="bm-info"><span class="bm-name">HANA DB</span><span class="bm-desc">CR✓ → HANA · ×4.8</span></div>
                         <div class="bm-right"><span class="bm-cost bm-lock-cost">🔒 400 RP</span></div>
                     </div>
-                    <div class="bm-item" data-tool="rnd" data-cost="400" onclick="game.selectTool('rnd')">
+                    <div class="bm-item" data-cost="400" onclick="game.selectTool('rnd')">
                         <kbd class="bm-key">L</kbd><div class="bm-icon">🔬</div>
                         <div class="bm-info"><span class="bm-name">R&amp;D Lab</span><span class="bm-desc">Konvertuje TR → Research Points</span></div>
                         <div class="bm-right"><span class="bm-cost">400 CZK</span></div>
                     </div>
                     <div class="bm-section-label">⚡ BC / BW Processing</div>
-                    <div class="bm-item" data-tool="sm36" data-cost="200" onclick="game.selectTool('sm36')">
+                    <div class="bm-item" data-cost="200" onclick="game.selectTool('sm36')">
                         <kbd class="bm-key">Z</kbd><div class="bm-icon">⏱</div>
                         <div class="bm-info"><span class="bm-name">SM36 Scheduler</span><span class="bm-desc">INC ×1.5 · ostatní ×1.1 · BG Jobs</span></div>
                         <div class="bm-right"><span class="bm-cost">200 CZK</span></div>
                     </div>
-                    <div class="bm-item bm-locked" data-lock="stms" data-tool="stms" data-cost="300" id="bm-stms" onclick="game.selectTool('stms')">
+                    <div class="bm-item bm-locked" data-cost="300" id="bm-stms" onclick="game.selectTool('stms')">
                         <kbd class="bm-key">U</kbd><div class="bm-icon">🚌</div>
                         <div class="bm-info"><span class="bm-name">STMS Router</span><span class="bm-desc">PRB ×1.7 · ostatní ×1.1 · Transport Mgmt</span></div>
                         <div class="bm-right"><span class="bm-cost bm-lock-cost">🔒 150 RP</span></div>
                     </div>
-                    <div class="bm-item" data-tool="oss" data-cost="280" onclick="game.selectTool('oss')">
+                    <div class="bm-item" data-cost="280" onclick="game.selectTool('oss')">
                         <kbd class="bm-key">I</kbd><div class="bm-icon">📝</div>
                         <div class="bm-info"><span class="bm-name">OSS Note Scanner</span><span class="bm-desc">ALL ore ×1.5 · SAP Notes applikace</span></div>
                         <div class="bm-right"><span class="bm-cost">280 CZK</span></div>
                     </div>
-                    <div class="bm-item bm-locked" data-lock="bw_dtp" data-tool="bw_dtp" data-cost="500" id="bm-bw-dtp" onclick="game.selectTool('bw_dtp')">
+                    <div class="bm-item bm-locked" data-cost="500" id="bm-bw-dtp" onclick="game.selectTool('bw_dtp')">
                         <kbd class="bm-key">O</kbd><div class="bm-icon">📊</div>
                         <div class="bm-info"><span class="bm-name">BW DTP Processor</span><span class="bm-desc">ALL ore ×2.0 · BW Data Transfer</span></div>
                         <div class="bm-right"><span class="bm-cost bm-lock-cost">🔒 300 RP</span></div>
@@ -344,25 +330,25 @@
             <!-- LOGISTICS -->
             <div class="bm-tab-body hidden" id="bmt-logistics">
                 <div class="bm-items bm-items-grid">
-                    <div class="bm-item" data-tool="b_u" data-cost="4" onclick="game.selectTool('b_u')">
+                    <div class="bm-item" data-cost="4" onclick="game.selectTool('b_u')">
                         <kbd class="bm-key">W/↑</kbd><div class="bm-icon">▲</div>
                         <div class="bm-info"><span class="bm-name">Belt ↑</span><span class="bm-desc">4 CZK</span></div>
                     </div>
-                    <div class="bm-item" data-tool="b_r" data-cost="4" onclick="game.selectTool('b_r')">
+                    <div class="bm-item" data-cost="4" onclick="game.selectTool('b_r')">
                         <kbd class="bm-key">D/→</kbd><div class="bm-icon">▶</div>
                         <div class="bm-info"><span class="bm-name">Belt →</span><span class="bm-desc">4 CZK</span></div>
                     </div>
-                    <div class="bm-item" data-tool="b_d" data-cost="4" onclick="game.selectTool('b_d')">
+                    <div class="bm-item" data-cost="4" onclick="game.selectTool('b_d')">
                         <kbd class="bm-key">S/↓</kbd><div class="bm-icon">▼</div>
                         <div class="bm-info"><span class="bm-name">Belt ↓</span><span class="bm-desc">4 CZK</span></div>
                     </div>
-                    <div class="bm-item" data-tool="b_l" data-cost="4" onclick="game.selectTool('b_l')">
+                    <div class="bm-item" data-cost="4" onclick="game.selectTool('b_l')">
                         <kbd class="bm-key">A/←</kbd><div class="bm-icon">◀</div>
                         <div class="bm-info"><span class="bm-name">Belt ←</span><span class="bm-desc">4 CZK</span></div>
                     </div>
                 </div>
                 <div class="bm-items bm-items-grid" style="margin-top:6px">
-                    <div class="bm-item" data-tool="splitter" data-cost="20" onclick="game.selectTool('splitter')">
+                    <div class="bm-item" data-cost="20" onclick="game.selectTool('splitter')">
                         <kbd class="bm-key">F</kbd><div class="bm-icon">⊕</div>
                         <div class="bm-info"><span class="bm-name">Splitter</span><span class="bm-desc">Round-robin na 2+ výstupy</span></div>
                     </div>
@@ -373,12 +359,12 @@
             <!-- INFRASTRUCTURE -->
             <div class="bm-tab-body hidden" id="bmt-infra">
                 <div class="bm-items">
-                    <div class="bm-item" data-tool="output" data-cost="250" onclick="game.selectTool('output')">
+                    <div class="bm-item" data-cost="250" onclick="game.selectTool('output')">
                         <kbd class="bm-key">P</kbd><div class="bm-icon">🏭</div>
                         <div class="bm-info"><span class="bm-name">PRD Deploy Station</span><span class="bm-desc">Prodej TRek → Budget CZK</span></div>
                         <div class="bm-right"><span class="bm-cost">250 CZK</span></div>
                     </div>
-                    <div class="bm-item" data-tool="delete" data-cost="0" onclick="game.selectTool('delete')">
+                    <div class="bm-item" data-cost="0" onclick="game.selectTool('delete')">
                         <kbd class="bm-key">X</kbd><div class="bm-icon">❌</div>
                         <div class="bm-info"><span class="bm-name">Delete Tool</span><span class="bm-desc">Odstraní budovu nebo belt</span></div>
                         <div class="bm-right"><span class="bm-cost" style="color:var(--dim2)">Free</span></div>

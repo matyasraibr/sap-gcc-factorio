@@ -486,48 +486,17 @@ body:not(.light) #grid-wrapper {
 .proc { opacity:.65; animation:proc-spin .7s linear infinite; }
 @keyframes proc-spin { to { transform:rotate(360deg); } }
 
-/* ===== HOTBAR ===== */
-#hotbar {
-  display:flex; align-items:center; justify-content:center;
-  padding:8px 12px; background:var(--panel); border-top:1px solid var(--border);
-  flex-shrink:0; gap:4px; flex-wrap:wrap;
+/* ===== STATUS BAR ===== */
+#status-bar {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:5px 14px; background:var(--panel); border-top:1px solid var(--border);
+  flex-shrink:0; min-height:32px;
 }
-#hb-slots {
-  display:flex; gap:4px; align-items:center; flex-wrap:wrap; justify-content:center;
-}
-.hb-slot {
-  display:flex; flex-direction:column; align-items:center; justify-content:center;
-  width:42px; height:42px;
-  background:var(--surface); border:1px solid var(--border);
-  border-radius:4px;
-  cursor:pointer;
-  font-size:.5rem; color:var(--text);
-  transition:all .15s;
-  position:relative;
-}
-.hb-slot:hover { background:var(--raised); border-color:var(--blue2); }
-.hb-slot.active { background:var(--blue); border-color:var(--blue2); box-shadow:0 0 8px var(--blue); }
-.hb-slot.hb-locked { opacity:.3; cursor:not-allowed; }
-.hb-slot.hb-locked:hover { background:var(--surface); border-color:var(--border); }
-.hb-slot kbd {
-  font-size:.42rem; color:var(--dim2); font-family:var(--mono);
-  position:absolute; top:1px; right:2px;
-}
-.hb-slot span { font-size:1.1rem; }
-.hb-spacer { width:1px; height:28px; background:var(--border2); margin:0 2px; }
-.hb-build-btn {
-  padding:6px 12px;
-  background:var(--surface); border:1px solid var(--border);
-  border-radius:4px; color:var(--text); font-size:.65rem; font-weight:600;
-  cursor:pointer; white-space:nowrap;
-  transition:all .15s;
-  font-family:var(--font);
-}
-.hb-build-btn:hover { background:var(--raised); border-color:var(--blue2); }
-.hb-build-btn kbd {
+#status-tool { font-size:.7rem; color:var(--dim); }
+.status-keys { font-size:.58rem; color:var(--dim2); display:flex; gap:4px; align-items:center; }
+.status-keys kbd {
   background:var(--raised); border:1px solid var(--border2);
-  border-radius:2px; padding:0 3px; font-size:.5rem; font-family:var(--mono);
-  margin-right:4px;
+  border-radius:3px; padding:0 4px; font-size:.54rem; font-family:var(--mono); color:var(--dim2);
 }
 
 /* ===== RIGHT PANEL — KPI TILES ===== */
@@ -827,7 +796,6 @@ body:not(.light) #grid-wrapper {
 .bm-item:hover { background: var(--raised); border-color: var(--blue2); }
 .bm-item.bm-dim { opacity: .38; }
 .bm-item.bm-locked { opacity: .32; pointer-events: none; }
-.bm-item.bmi-active { background:var(--blue); border-color:var(--blue2); box-shadow:0 0 8px var(--blue); color:#fff; }
 
 .bm-key {
   background: var(--raised); border: 1px solid var(--border2);
@@ -962,31 +930,6 @@ body.light .chip-budget { background: #e0eeff; border-color: var(--blue); }
 body.light .stat-chip { background: var(--surface); }
 body.light #topbar-stats .stat-value { color: var(--blue); }
 body.light .chip-budget .stat-value { color: var(--blue); }
-body.light .hb-slot { background:var(--raised); color:var(--blue); }
-body.light .hb-slot:hover { background:#e0eeff; }
-body.light .hb-slot.active { background:var(--blue); color:#fff; }
-body.light .hb-build-btn { background:var(--raised); color:var(--blue); }
-body.light .bm-item.bmi-active { background:var(--blue); border-color:var(--blue2); color:#fff; }
-
-/* ===== ACHIEVEMENT TOASTS ===== */
-.achievement-toast {
-  position: fixed; bottom: 80px; right: 20px; z-index: 2000;
-  background: linear-gradient(135deg, #0d2040, #0a3020);
-  border: 1px solid var(--green); border-radius: 10px;
-  padding: 12px 16px; display: flex; align-items: center; gap: 12px;
-  box-shadow: 0 8px 32px rgba(0,184,106,.3), 0 0 0 1px rgba(0,184,106,.15);
-  opacity: 0; transform: translateX(40px);
-  transition: opacity .3s ease, transform .3s cubic-bezier(.34,1.4,.64,1);
-  pointer-events: none; min-width: 220px;
-}
-.achievement-toast.show { opacity: 1; transform: translateX(0); }
-.ach-icon { font-size: 1.8rem; flex-shrink: 0; }
-.ach-title { font-size: .6rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--green); }
-.ach-label { font-size: .78rem; font-weight: 700; color: var(--text); margin-top: 1px; }
-
-/* ===== EVENT BANNER VARIANTS ===== */
-#event-banner.event-warn { border-left-color: var(--yellow); color: var(--yellow); }
-#event-banner.event-good { border-left-color: var(--green);  color: var(--green);  }
 
 /* ===== RESOURCE GUIDE ===== */
 .rg-ore { border-radius:5px; overflow:hidden; margin-bottom:3px; border:1px solid var(--border); }
@@ -1020,3 +963,74 @@ body.light .bm-item.bmi-active { background:var(--blue); border-color:var(--blue
   font-size:.55rem; color:var(--dim2); margin-top:4px;
   padding:3px 5px; border-left:2px solid var(--border2); font-style:italic;
 }
+
+/* ===== EVENT BANNER (náhodné eventy) ===== */
+#event-banner {
+  position:fixed; bottom:78px; left:50%; transform:translateX(-50%);
+  background:var(--panel); border:1px solid var(--border2);
+  border-radius:8px; padding:9px 22px;
+  font-size:.76rem; font-weight:600; color:var(--text);
+  z-index:300; white-space:nowrap;
+  box-shadow:0 6px 24px rgba(0,0,0,.55);
+  animation:ev-in .22s ease;
+}
+#event-banner.hidden { display:none; }
+#event-banner.ev-warn { border-left:3px solid var(--yellow); color:var(--yellow); }
+#event-banner.ev-good { border-left:3px solid var(--green);  color:var(--green);  }
+@keyframes ev-in { from{opacity:0;transform:translateX(-50%) translateY(10px)} to{opacity:1;transform:translateX(-50%)} }
+
+/* ===== ACHIEVEMENT TOASTS ===== */
+.ach-toast {
+  position:fixed; bottom:90px; right:18px; z-index:400;
+  background:var(--panel); border:1px solid var(--green);
+  border-radius:10px; padding:12px 16px;
+  display:flex; align-items:center; gap:12px;
+  box-shadow:0 8px 28px rgba(0,184,106,.25);
+  opacity:0; transform:translateX(50px);
+  transition:opacity .3s ease, transform .3s cubic-bezier(.34,1.4,.64,1);
+  pointer-events:none; min-width:220px;
+}
+.ach-toast.ach-show { opacity:1; transform:translateX(0); }
+.ach-icon { font-size:1.75rem; flex-shrink:0; }
+.ach-head { font-size:.56rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--green); }
+.ach-lbl  { font-size:.78rem; font-weight:700; color:var(--text); margin-top:2px; }
+
+/* ===== LIGHT MODE – panel & UI fixes ===== */
+body.light .stat-chip   { background:var(--surface); border-color:var(--border2); }
+body.light .stat-value  { color:var(--blue); }
+body.light .chip-budget .stat-value { color:var(--yellow); }
+body.light .chip-rp .stat-value { color:var(--teal); }
+body.light aside { background:var(--panel); border-color:var(--border); }
+body.light .section-head { color:var(--dim); border-color:var(--border); }
+body.light .ore-card.inc { background:rgba(0,90,156,.07); border-color:rgba(0,90,156,.3); }
+body.light .ore-card.prb { background:rgba(176,80,16,.07); border-color:rgba(176,80,16,.3); }
+body.light .ore-card.chg { background:rgba(80,32,160,.07); border-color:rgba(80,32,160,.3); }
+body.light .stage-chip  { background:var(--surface); border-color:var(--border2); }
+body.light .mg  { background:var(--surface); border-color:var(--border); }
+body.light .mg-v { color:var(--blue); }
+body.light .res-item { background:var(--surface); border-color:var(--border); }
+body.light .res-avail { border-color:var(--blue); background:rgba(0,90,156,.06); }
+body.light .res-name { color:var(--text); }
+body.light #menu-card { background:var(--panel); border-color:var(--border2); }
+body.light #menu-gameinfo { background:var(--surface); }
+body.light .gi-val { color:var(--blue); }
+body.light .save-slot { background:var(--surface); border-color:var(--border); }
+body.light .save-slot.has-data { border-color:var(--blue); }
+body.light .slot-n { color:var(--blue); }
+body.light .hb-slot { background:var(--surface); border-color:var(--border2); }
+body.light .hb-slot.hb-active { background:rgba(0,90,156,.15); border-color:var(--blue); box-shadow:0 0 8px rgba(0,90,156,.2); }
+body.light #bm-panel { background:var(--panel); border-color:var(--border2); }
+body.light .bm-tab { color:var(--dim); }
+body.light .bm-tab-active { color:var(--blue2) !important; border-bottom-color:var(--blue2) !important; }
+body.light .bm-item { background:var(--surface); border-color:var(--border); }
+body.light .bm-item:hover { background:var(--raised); border-color:var(--blue2); }
+body.light .bm-item.bm-active { background:rgba(0,90,156,.12); border-color:var(--blue); }
+body.light .bm-key { background:var(--raised); color:var(--blue); }
+body.light .t-empty { background:linear-gradient(135deg,#dde5f0,#e8eef5); }
+body.light .t-empty:hover { background:#d0dce8; }
+body.light #grid-wrapper { background:radial-gradient(ellipse at 50% 50%,#e0e8f4,#d0dcea); }
+body.light #event-banner { background:var(--panel); border-color:var(--border2); }
+body.light .ach-toast { background:var(--panel); }
+body.light #event-log p { border-color:var(--border); }
+body.light #event-log p.good { color:var(--green); }
+body.light #event-log p.bad  { color:var(--red); }
