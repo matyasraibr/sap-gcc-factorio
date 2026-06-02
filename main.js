@@ -314,19 +314,15 @@ const game = (() => {
       const dc=$('hb-belt-dir');  if(dc) dc.textContent=BELT_DIRS[tool]+' · W↻';
       HOTKEYS['2']=tool;
     }
-    // Hotbar locked state for proc buildings
-    ['change_board','hana_db'].forEach(k=>{
+    // Hotbar locked state — update via data-tool selectors
+    ['change_board','hana_db','stms','bw_dtp'].forEach(k=>{
       const locked=!state.unlocked.has(k);
-      const s=$('hb-'+k.replace(/_/g,'-'));
-      if(s){s.classList.toggle('hb-locked',locked);const c=s.querySelector('.hb-cost');if(c)c.textContent=locked?'🔒':`${COSTS[k]}`;}
+      document.querySelectorAll(`.hb-slot[data-tool="${k}"]`).forEach(s=>s.classList.toggle('hb-locked',locked));
     });
     // Build menu highlight
-    document.querySelectorAll('[data-tool]').forEach(el=>{
+    document.querySelectorAll('#bm-panel [data-tool]').forEach(el=>{
       el.classList.toggle('bm-active', el.dataset.tool===tool);
     });
-    // Backwards compat: old .tool-btn (no-op if removed)
-    document.querySelectorAll('.tool-btn').forEach(b=>b.classList.remove('active'));
-    const ob=$('t-'+tool.replace(/_/g,'-'));if(ob)ob.classList.add('active');
 
     const locked=PROC_TILES.has(T[tool])&&!state.unlocked.has(tool);
     const hints={
@@ -391,7 +387,7 @@ const game = (() => {
       const bmi=$('bm-'+k.replace(/_/g,'-'));
       if(bmi){bmi.classList.toggle('bm-locked',locked);const lc=bmi.querySelector('.bm-lock-cost');if(lc)lc.textContent=locked?'🔒 RP needed':`${COSTS[k]} CZK`;}
     });
-    const bo=$('build-overlay');if(bo&&!bo.classList.contains('hidden'))updateBuildMenuState();
+    if(state.buildMenuOpen)renderBuildMenu();
   }
 
   function research(key){

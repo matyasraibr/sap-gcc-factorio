@@ -964,6 +964,48 @@ body.light .chip-budget .stat-value { color: var(--blue); }
   padding:3px 5px; border-left:2px solid var(--border2); font-style:italic;
 }
 
+/* ===== HOTBAR ===== */
+#hotbar {
+  display:flex; align-items:center; gap:3px;
+  padding:5px 10px;
+  background:var(--panel); border-top:1px solid var(--border);
+  flex-shrink:0; overflow-x:auto;
+}
+.hb-slot {
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:1px; min-width:42px; height:44px;
+  background:var(--surface); border:1px solid var(--border2);
+  border-radius:7px; cursor:pointer; user-select:none;
+  transition:background .1s, border-color .1s, box-shadow .1s;
+  flex-shrink:0; position:relative;
+}
+.hb-slot kbd {
+  font-size:.42rem; font-family:var(--mono); font-weight:700;
+  color:var(--dim2); line-height:1; pointer-events:none;
+}
+.hb-slot span { font-size:.95rem; line-height:1; pointer-events:none; }
+.hb-slot:hover { background:var(--raised); border-color:var(--blue); }
+.hb-slot.hb-active {
+  background:rgba(0,90,156,.22); border-color:var(--blue2);
+  box-shadow:0 0 10px rgba(0,90,156,.3);
+}
+.hb-slot.hb-locked { opacity:.3; pointer-events:none; }
+.hb-slot.hb-delete:hover { border-color:var(--red); background:rgba(232,48,48,.1); }
+.hb-sep { width:1px; height:30px; background:var(--border2); margin:0 2px; flex-shrink:0; }
+.hb-catalogue {
+  display:flex; align-items:center; gap:5px; margin-left:4px;
+  background:rgba(0,90,156,.15); border:1px solid var(--blue);
+  border-radius:7px; padding:6px 12px; cursor:pointer;
+  color:var(--blue2); font-size:.7rem; font-weight:700; white-space:nowrap;
+  transition:background .1s; flex-shrink:0;
+}
+.hb-catalogue kbd {
+  background:var(--raised); border:1px solid var(--border2);
+  border-radius:3px; padding:1px 5px; font-size:.58rem;
+  font-family:var(--mono); color:var(--dim);
+}
+.hb-catalogue:hover { background:rgba(0,90,156,.28); border-color:var(--blue2); }
+
 /* ===== EVENT BANNER (náhodné eventy) ===== */
 #event-banner {
   position:fixed; bottom:78px; left:50%; transform:translateX(-50%);
