@@ -325,9 +325,10 @@ aside {
 /* ===== GRID ===== */
 #grid-wrapper {
   flex:1; display:flex; align-items:flex-start; justify-content:flex-start;
-  overflow:auto;
+  overflow:auto; scroll-behavior:smooth;
   background:var(--bg);
   padding:12px;
+  cursor:crosshair;
 }
 body:not(.light) #grid-wrapper {
   background:radial-gradient(ellipse at 40% 40%,#0a1528 0%,#040810 100%);
@@ -1089,3 +1090,47 @@ body.light .ach-toast { background:var(--panel); }
 body.light #event-log p { border-color:var(--border); }
 body.light #event-log p.good { color:var(--green); }
 body.light #event-log p.bad  { color:var(--red); }
+
+/* ===== BELT DIRECTION OVERLAY ===== */
+/* Larger, clearly visible arrows on belt tiles */
+.t-b_r::after,.t-b_l::after,.t-b_d::after,.t-b_u::after {
+  font-size:1.1rem; font-weight:900; opacity:.55; pointer-events:none;
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+}
+.t-b_r::after { content:'▶'; color:#3a8fc0; }
+.t-b_l::after { content:'◀'; color:#3a8fc0; }
+.t-b_d::after { content:'▼'; color:#3a8fc0; }
+.t-b_u::after { content:'▲'; color:#3a8fc0; }
+
+/* ===== SMOOTH ITEM ANIMATION ===== */
+.world-item {
+  transition:left var(--item-ms,.92s) cubic-bezier(.4,0,.2,1),
+             top  var(--item-ms,.92s) cubic-bezier(.4,0,.2,1);
+}
+
+/* ===== CLOG / STALL DETECTION ===== */
+.item-clog {
+  animation:clog-pulse .6s ease-in-out infinite !important;
+  border-color:var(--red) !important;
+  box-shadow:0 0 12px rgba(232,48,48,.8) !important;
+}
+@keyframes clog-pulse {
+  0%,100%{filter:brightness(1);}
+  50%{filter:brightness(1.8) saturate(1.5);}
+}
+
+.cell-clog {
+  animation:cell-clog-flash .5s ease-in-out infinite;
+}
+@keyframes cell-clog-flash {
+  0%,100%{box-shadow:inset 0 0 0 2px transparent;}
+  50%{box-shadow:inset 0 0 0 2px var(--red);}
+}
+
+#clog-alert {
+  position:absolute; bottom:56px; left:50%; transform:translateX(-50%);
+  background:rgba(232,48,48,.15); border:1px solid var(--red); border-radius:6px;
+  padding:5px 16px; font-size:.72rem; font-weight:700; color:var(--red);
+  white-space:nowrap; z-index:50; pointer-events:none;
+  animation:ev-in .2s ease;
+}

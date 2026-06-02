@@ -5,7 +5,7 @@ function toggleSection(el) {
 }
 
 const game = (() => {
-  const COLS = 40, ROWS = 20, T_PX = 40;
+  const COLS = 60, ROWS = 30, T_PX = 40;
 
   const T = {
     empty:'empty', output:'output',
@@ -132,9 +132,15 @@ const game = (() => {
       while(!ok(x,y)&&t<40);
       clump(tile,x,y);
     }
-    rand(T.ore_i,4,12);rand(T.ore_i,8,20);if(Math.random()>.5)rand(T.ore_i,14,26);
-    rand(T.ore_p,10,22);rand(T.ore_p,16,30);if(Math.random()>.5)rand(T.ore_p,8,24);
-    rand(T.ore_c,18,30);rand(T.ore_c,24,38);
+    // INC — levá část mapy
+    rand(T.ore_i,4,15);rand(T.ore_i,10,22);rand(T.ore_i,16,28);
+    if(Math.random()>.4)rand(T.ore_i,5,18);
+    // PRB — střed
+    rand(T.ore_p,18,32);rand(T.ore_p,25,40);rand(T.ore_p,14,30);
+    if(Math.random()>.4)rand(T.ore_p,22,38);
+    // CHG — pravá část mapy (nejcennější, nejdál)
+    rand(T.ore_c,35,50);rand(T.ore_c,42,56);rand(T.ore_c,30,48);
+    if(Math.random()>.4)rand(T.ore_c,38,54);
     return g;
   }
 
@@ -247,14 +253,25 @@ const game = (() => {
     return `world-item ${REQ[it.type].cls}${sc?' '+sc:''}${it.delay>0?' proc':''}`;
   }
 
+  // item stall tracking: id → {x,y,ticks}
+  const _itemStall={};
+
   function renderItems() {
     const live=new Set(state.items.map(i=>i.id));
+    const now=Date.now();
     for (const it of state.items) {
       const lx=it.x*T_PX+T_PX/2-12,ly=it.y*T_PX+T_PX/2-12;
       const lbl=iLabel(it),cls=iCls(it);
+      // stall tracking
+      const st=_itemStall[it.id];
+      if(!st||st.x!==it.x||st.y!==it.y){
+        _itemStall[it.id]={x:it.x,y:it.y,since:now};
+      }
+      const stalled=it.delay===0&&(_itemStall[it.id]?.since??now)<now-3000;
+
       if (!itemEls[it.id]) {
         const el=document.createElement('div');
-        el.textContent=lbl;el.className=cls;
+        el.textContent=lbl;el.className=cls+(stalled?' item-clog':'');
         $('game-grid').appendChild(el);
         itemEls[it.id]=el;
         el.style.transition='none';
@@ -263,11 +280,25 @@ const game = (() => {
       } else {
         const el=itemEls[it.id];
         if(el.textContent!==lbl)el.textContent=lbl;
-        if(el.className!==cls)el.className=cls;
+        const wantCls=cls+(stalled?' item-clog':'');
+        if(el.className!==wantCls)el.className=wantCls;
         el.style.left=lx+'px';el.style.top=ly+'px';
       }
     }
+    // cleanup stall records for removed items
+    for(const id in _itemStall){if(!live.has(+id))delete _itemStall[id];}
     for(const id in itemEls){if(!live.has(+id)){itemEls[id].remove();delete itemEls[id];}}
+    // clog alert
+    const clogCount=state.items.filter(it=>it.delay===0&&(_itemStall[it.id]?.since??now)<now-3000).length;
+    const clogEl=$('clog-alert');
+    if(clogEl)clogEl.classList.toggle('hidden',clogCount===0);
+    if(clogCount>0){const ce=$('clog-count');if(ce)ce.textContent=clogCount;}
+    // flash clogged belt cells
+    for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){
+      if(!BELT_TILES.has(state.grid[y][x]))continue;
+      const here=state.items.find(it=>it.x===x&&it.y===y&&it.delay===0&&(_itemStall[it.id]?.since??now)<now-3000);
+      cellEls[y][x].classList.toggle('cell-clog',!!here);
+    }
   }
 
   // ── CELL CLICK ─────────────────────────────────────────────────────────────
@@ -841,6 +872,15 @@ const game = (() => {
     }
   }
 
+  // ── CAMERA PAN (arrow keys scroll the grid wrapper) ───────────────────────
+  const PAN_STEP = T_PX * 3; // 3 tiles per keypress
+  function panCamera(dx, dy) {
+    const w = $('grid-wrapper');
+    if (!w) return;
+    w.scrollLeft = Math.max(0, w.scrollLeft + dx * PAN_STEP);
+    w.scrollTop  = Math.max(0, w.scrollTop  + dy * PAN_STEP);
+  }
+
   // ── KEYBOARD ───────────────────────────────────────────────────────────────
   document.addEventListener('keydown', e => {
     if(!$('title-overlay').classList.contains('hidden'))return;
@@ -855,15 +895,22 @@ const game = (() => {
     }
     if(state.paused)return;
     const k=e.key.toLowerCase();
+
+    // Arrow keys = camera pan
+    if(e.key==='ArrowUp')   {e.preventDefault();panCamera(0,-1);return;}
+    if(e.key==='ArrowDown') {e.preventDefault();panCamera(0, 1);return;}
+    if(e.key==='ArrowLeft') {e.preventDefault();panCamera(-1,0);return;}
+    if(e.key==='ArrowRight'){e.preventDefault();panCamera( 1,0);return;}
+
     if(k==='b'){toggleBuildMenu();return;}
     if(k==='1'){purchaseBuilding('service_desk');return;}
     if(k==='2'){purchaseBuilding('problem_mgmt');return;}
     if(k==='3'){purchaseBuilding('cab');return;}
-    // Belt directions — WASD and arrow keys
-    if(k==='w'||k==='arrowup'){e.preventDefault();selectTool('b_u');return;}
-    if(k==='d'||k==='arrowright'){e.preventDefault();selectTool('b_r');return;}
-    if(k==='s'||k==='arrowdown'){e.preventDefault();selectTool('b_d');return;}
-    if(k==='a'||k==='arrowleft'){e.preventDefault();selectTool('b_l');return;}
+    // WASD = belt directions only
+    if(k==='w'){selectTool('b_u');return;}
+    if(k==='d'){selectTool('b_r');return;}
+    if(k==='s'){selectTool('b_d');return;}
+    if(k==='a'){selectTool('b_l');return;}
     if(k==='q'){selectTool('miner');return;}
     if(k==='e'){selectTool('compiler');return;}
     if(k==='r'){selectTool('qa_gate');return;}
