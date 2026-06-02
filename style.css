@@ -832,6 +832,16 @@ body:not(.light) #grid-wrapper {
   font-family: var(--mono); color: var(--blue2);
 }
 
+/* ===== SPLITTER TILE ===== */
+.t-splitter {
+  background:linear-gradient(135deg,#0a1a28,#081420);
+  border:1px solid #2a5070 !important; color:#50a0d0; font-size:1.1rem;
+}
+.t-splitter::before {
+  content:''; position:absolute; inset:6px;
+  border:1px dashed #2a507055; border-radius:3px; pointer-events:none;
+}
+
 /* ===== BC / BW TILES ===== */
 .t-sm36 {
   background:#061828; border:2px solid #1a5090 !important; color:#70b0f0; font-size:.85rem;

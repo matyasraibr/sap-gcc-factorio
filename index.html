@@ -101,7 +101,7 @@
                             <div class="rg-row"><span>✔ QA Gate → QA✓</span><span>157 CZK</span></div>
                             <div class="rg-row"><span>📋 Change Board → CR✓</span><span>240 CZK</span></div>
                             <div class="rg-row rg-best"><span>🗄 HANA DB → HANA ★</span><span>360 CZK</span></div>
-                            <div class="rg-tip">💡 ⏱ SM36 Scheduler: INC ×1.5 · 📝 OSS ×1.5 · 📊 BW DTP ×2.0</div>
+                            <div class="rg-tip">💡 Vlastní linka: ⊕→⏱ SM36 (RAW→QA✓) → 📝 OSS ×1.4 → 📊 BW DTP ×1.8 → PRD</div>
                         </div>
                     </details>
                     <details class="rg-ore prb">
@@ -112,7 +112,7 @@
                             <div class="rg-row"><span>✔ QA Gate → QA✓</span><span>420 CZK</span></div>
                             <div class="rg-row"><span>📋 Change Board → CR✓</span><span>640 CZK</span></div>
                             <div class="rg-row rg-best"><span>🗄 HANA DB → HANA ★</span><span>960 CZK</span></div>
-                            <div class="rg-tip">💡 🚌 STMS Router: PRB ×1.7 · 📝 OSS ×1.5 · 📊 BW DTP ×2.0</div>
+                            <div class="rg-tip">💡 ⊕→⚙ Compiler→🚌 STMS (TR→CR✓) → 📝 OSS ×1.4 → 📊 BW DTP ×1.8 → PRD</div>
                         </div>
                     </details>
                     <details class="rg-ore chg">
@@ -138,6 +138,7 @@
                     <div class="price-r"><span>✔ QA Gate</span><b>80</b></div>
                     <div class="price-r"><span>📋 Change Board</span><b>180</b></div>
                     <div class="price-r"><span>🗄 HANA DB</span><b>300</b></div>
+                    <div class="price-r"><span>⊕ Splitter</span><b>20</b></div>
                     <div class="price-r"><span>🏭 PRD Station</span><b>250</b></div>
                     <div class="price-r"><span>🔬 R&amp;D Lab</span><b>400</b></div>
                     <div class="price-r"><span>⏱ SM36 Scheduler</span><b>200</b></div>
@@ -190,7 +191,8 @@
                         <div class="mg"><span class="mg-v" id="m-procs">0</span><span class="mg-l">Budov</span></div>
                         <div class="mg"><span class="mg-v" id="m-items">0</span><span class="mg-l">Items</span></div>
                         <div class="mg"><span class="mg-v" id="m-mult">×1.0</span><span class="mg-l">Mult</span></div>
-                        <div class="mg" style="grid-column:span 2"><span class="mg-v" id="m-int">3s / ×1</span><span class="mg-l">Mining / Belt</span></div>
+                        <div class="mg"><span class="mg-v" id="m-rpm">0/min</span><span class="mg-l">Deploys/min</span></div>
+                        <div class="mg"><span class="mg-v" id="m-int">3s / ×1</span><span class="mg-l">Mining / Belt</span></div>
                     </div>
                 </div>
             </div>
@@ -343,6 +345,12 @@
                     <div class="bm-item" data-cost="4" onclick="game.selectTool('b_l')">
                         <kbd class="bm-key">A/←</kbd><div class="bm-icon">◀</div>
                         <div class="bm-info"><span class="bm-name">Belt ←</span><span class="bm-desc">4 CZK</span></div>
+                    </div>
+                </div>
+                <div class="bm-items bm-items-grid" style="margin-top:6px">
+                    <div class="bm-item" data-cost="20" onclick="game.selectTool('splitter')">
+                        <kbd class="bm-key">F</kbd><div class="bm-icon">⊕</div>
+                        <div class="bm-info"><span class="bm-name">Splitter</span><span class="bm-desc">Round-robin na 2+ výstupy</span></div>
                     </div>
                 </div>
                 <div class="bm-milestone"><div class="bm-ms-item"><span>🔓 150 RP:</span><span>Express Belts 2× Speed</span></div></div>

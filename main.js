@@ -15,6 +15,7 @@ const game = (() => {
     compiler:'compiler', qa_gate:'qa_gate',
     change_board:'change_board', hana_db:'hana_db', rnd:'rnd',
     sm36:'sm36', stms:'stms', oss:'oss', bw_dtp:'bw_dtp',
+    splitter:'splitter',
   };
 
   const ORE_TILES  = new Set([T.ore_i, T.ore_p, T.ore_c]);
@@ -43,16 +44,19 @@ const game = (() => {
     [T.qa_gate]:      { needStage:1, ticks:1, outStage:2 },
     [T.change_board]: { needStage:2, ticks:3, outStage:3 },
     [T.hana_db]:      { needStage:3, ticks:2, outStage:4 },
-    // BC/BW value-boost processors — accept any stage, multiply item.value
-    // specType gets valueMult; other ores get baseMult
-    [T.sm36]:   { needStage:-1, ticks:1, outStage:-1, specType:'incident', valueMult:1.5, baseMult:1.1 },
-    [T.stms]:   { needStage:-1, ticks:2, outStage:-1, specType:'problem',  valueMult:1.7, baseMult:1.1 },
-    [T.oss]:    { needStage:-1, ticks:2, outStage:-1, specType:null,        valueMult:1.5, baseMult:1.5 },
-    [T.bw_dtp]: { needStage:-1, ticks:3, outStage:-1, specType:null,        valueMult:2.0, baseMult:2.0 },
+    // BC/BW ore-type-specific pipeline shortcuts — forces dedicated lanes per ore
+    // SM36: INC-only shortcut RAW(0)→QA✓(2), saves Compiler+QA Gate
+    [T.sm36]:   { needStage:0, oreTypes:['incident'], ticks:2, outStage:2 },
+    // STMS: PRB-only shortcut TR(1)→CR✓(3), saves QA+Change Board (needs Compiler first)
+    [T.stms]:   { needStage:1, oreTypes:['problem'],  ticks:3, outStage:3 },
+    // OSS: INC+PRB value booster any stage ×1.4, rejects CHG
+    [T.oss]:    { needStage:-1, oreTypes:['incident','problem'], ticks:1, outStage:-1, valueMult:1.4 },
+    // BW DTP: universal booster for QA✓(2)+ stages, ×1.8
+    [T.bw_dtp]: { needStage:2, ticks:3, outStage:-1, valueMult:1.8 },
   };
 
-  const PROC_DEFAULTS = { compiler:2, qa_gate:1, change_board:3, hana_db:2, sm36:1, stms:2, oss:2, bw_dtp:3 };
-  const COSTS = { miner:80, belt:4, compiler:120, qa_gate:80, change_board:180, hana_db:300, output:250, rnd:400, sm36:200, stms:300, oss:280, bw_dtp:500 };
+  const PROC_DEFAULTS = { compiler:2, qa_gate:1, change_board:3, hana_db:2, sm36:2, stms:3, oss:1, bw_dtp:3 };
+  const COSTS = { miner:80, belt:4, compiler:120, qa_gate:80, change_board:180, hana_db:300, output:250, rnd:400, sm36:200, stms:300, oss:280, bw_dtp:500, splitter:20 };
   const BELT_CYCLE = ['b_r','b_d','b_u','b_l'];
   const HOTKEYS = {'1':'miner','2':'b_r','3':'compiler','4':'qa_gate','5':'change_board','6':'hana_db','x':'delete'};
 
@@ -121,6 +125,7 @@ const game = (() => {
     researched:new Set(), unlocked:new Set(['compiler','qa_gate','sm36','oss']),
     rpMilestonesHit:new Set(),
     minerInterval:3, globalMult:1.0, beltPasses:1, beltTickMs:1000, hanaCloudMult:1.0,
+    splitterCtrs:{}, rpmHistory:new Array(60).fill(0), rpmTick:0,
     paused:true,
     autoBuildings:{ service_desk:0, problem_mgmt:0, cab:0 },
     abTimers:     { service_desk:3, problem_mgmt:5, cab:8 },
@@ -166,7 +171,7 @@ const game = (() => {
 
   const TILE_ICON={[T.min_i]:'⛏',[T.min_p]:'⛏',[T.min_c]:'⛏',[T.b_r]:'',[T.b_l]:'',[T.b_d]:'',[T.b_u]:'',
     [T.output]:'🏭',[T.compiler]:'⚙',[T.qa_gate]:'✔',[T.change_board]:'📋',[T.hana_db]:'🗄',[T.rnd]:'🔬',
-    [T.sm36]:'⏱',[T.stms]:'🚌',[T.oss]:'📝',[T.bw_dtp]:'📊'};
+    [T.sm36]:'⏱',[T.stms]:'🚌',[T.oss]:'📝',[T.bw_dtp]:'📊',[T.splitter]:'⊕'};
 
   function renderGrid() {
     for (let y=0;y<ROWS;y++) for (let x=0;x<COLS;x++) {
@@ -247,7 +252,7 @@ const game = (() => {
     const tool=state.tool,t=state.grid[y][x];
     if(tool==='delete'){
       if(MIN_TILES.has(t)){state.miners=state.miners.filter(m=>!(m.x===x&&m.y===y));state.grid[y][x]=MIN_TO_ORE[t];}
-      else if(BELT_TILES.has(t)||PROC_TILES.has(t)||t===T.output||t===T.rnd)state.grid[y][x]=T.empty;
+      else if(BELT_TILES.has(t)||PROC_TILES.has(t)||t===T.output||t===T.rnd||t===T.splitter)state.grid[y][x]=T.empty;
       renderGrid();updateUI();return;
     }
     if(tool==='miner'){
@@ -280,6 +285,13 @@ const game = (() => {
       if(t!==T.empty){toast('Belt jen na prázdné pole!');return;}
       if(state.budget<COSTS.belt){toast(`❌ Potřebuješ ${COSTS.belt} CZK`);return;}
       state.budget-=COSTS.belt;state.grid[y][x]=tool;
+      renderGrid();updateUI();return;
+    }
+    if(tool==='splitter'){
+      if(t!==T.empty){toast('Musí být prázdné pole!');return;}
+      if(state.budget<COSTS.splitter){toast(`❌ Potřebuješ ${COSTS.splitter} CZK`);return;}
+      state.budget-=COSTS.splitter;state.grid[y][x]=T.splitter;
+      eventLog(`🏗 Splitter (${x},${y})`,'good');
       renderGrid();updateUI();return;
     }
   }
@@ -329,10 +341,11 @@ const game = (() => {
       hana_db:locked?'🗄 HANA DB · 🔒 400 RP nutné [Y]':`🗄 HANA DB · CR✓→HANA · ×4.8 · 350 CZK  [Y]`,
       output:'🏭 PRD Station · Prodej TRek za CZK · 250 CZK  [P]',
       rnd:'🔬 R&D Lab · TR → Research Points (RP) · 400 CZK  [L]',
-      sm36:'⏱ SM36 Scheduler · INC ×1.5 / ostatní ×1.1 · 200 CZK  [Z]',
-      stms:'🚌 STMS Router · PRB ×1.7 / ostatní ×1.1 · 300 CZK  [U]',
-      oss:'📝 OSS Scanner · ALL ore ×1.5 · 280 CZK  [I]',
-      bw_dtp:'📊 BW DTP · ALL ore ×2.0 · 500 CZK  [O]',
+      sm36:'⏱ SM36 Scheduler · INC RAW→QA✓ shortcut · 200 CZK  [Z]',
+      stms:'🚌 STMS Router · PRB TR→CR✓ shortcut (po Compileru) · 300 CZK  [U]',
+      oss:'📝 OSS Scanner · INC+PRB value ×1.4 · CHG odmítá · 280 CZK  [I]',
+      bw_dtp:'📊 BW DTP · QA✓+ stage ×1.8 · 500 CZK  [O]',
+      splitter:'⊕ Splitter · Rozděluje items round-robin na 2+ výstupy · 20 CZK  [F]',
       delete:'❌ Delete · Smaže budovu nebo belt  [X]',
     };
     $('tool-hint').textContent=hints[tool]??'';
@@ -435,13 +448,14 @@ const game = (() => {
         const nx=it.x+it.pdx,ny=it.y+it.pdy;
         if(!inBounds(nx,ny))continue;
         const nt=grid[ny][nx];
-        if(!BELT_TILES.has(nt)&&!PROC_TILES.has(nt)&&nt!==T.output&&nt!==T.rnd)continue;
+        if(!BELT_TILES.has(nt)&&!PROC_TILES.has(nt)&&nt!==T.output&&nt!==T.rnd&&nt!==T.splitter)continue;
         if(!free(nx,ny,it.id))continue;
         it.x=nx;it.y=ny;it.pdx=0;it.pdy=0;continue;
       }
       if(t===T.output){
         const payout=Math.floor(it.value*STAGE_MULT[it.stage]*state.globalMult*state.hanaCloudMult);
         state.budget+=payout;state.totalDeploys++;state.tickBudget+=payout;
+        state.rpmHistory[state.rpmTick]++;
         eventLog(`🚀 ${REQ[it.type].icon}[${STAGE_LABEL[it.stage]}] +${payout} CZK`,'good');
         remove.add(it.id);flashPRD();continue;
       }
@@ -451,6 +465,25 @@ const game = (() => {
         eventLog(`🔬 +${rp} RP [${STAGE_LABEL[it.stage]}]`,'good');
         remove.add(it.id);continue;
       }
+      // Splitter: round-robin route to adjacent valid tiles
+      if(t===T.splitter){
+        const dirs=[{dx:1,dy:0},{dx:-1,dy:0},{dx:0,dy:1},{dx:0,dy:-1}];
+        const outs=dirs.filter(d=>{
+          const ox=it.x+d.dx,oy=it.y+d.dy;
+          if(!inBounds(ox,oy))return false;
+          const ot=grid[oy][ox];
+          return BELT_TILES.has(ot)||PROC_TILES.has(ot)||ot===T.output||ot===T.rnd;
+        });
+        if(outs.length){
+          const k=it.y*COLS+it.x;
+          const idx=(state.splitterCtrs[k]||0)%outs.length;
+          state.splitterCtrs[k]=(state.splitterCtrs[k]||0)+1;
+          const d=outs[idx];
+          const ox=it.x+d.dx,oy=it.y+d.dy;
+          if(free(ox,oy,it.id)){it.x=ox;it.y=oy;}
+        }
+        continue;
+      }
       const mv=BELT_MOVE[t];if(!mv)continue;
       const nx=it.x+mv.dx,ny=it.y+mv.dy;
       if(!inBounds(nx,ny))continue;
@@ -459,16 +492,19 @@ const game = (() => {
         const cfg=PROC_CFG[nt];
         if(cfg){
           const stageOk=cfg.needStage<0||it.stage===cfg.needStage;
-          if(stageOk&&!items.find(i=>i.id!==it.id&&i.x===nx&&i.y===ny)){
+          const typeOk=!cfg.oreTypes||cfg.oreTypes.includes(it.type);
+          if(stageOk&&typeOk&&!items.find(i=>i.id!==it.id&&i.x===nx&&i.y===ny)){
             it.x=nx;it.y=ny;it.pdx=mv.dx;it.pdy=mv.dy;it.delay=cfg.ticks;
             if(it.delay===0){
               if(cfg.outStage>=0)it.stage=cfg.outStage;
-              if(cfg.valueMult!=null)it.value=Math.round(it.value*(it.type===cfg.specType?cfg.valueMult:cfg.baseMult??1));
+              if(cfg.valueMult!=null)it.value=Math.round(it.value*cfg.valueMult);
             }
           }
         }
         continue;
       }
+      // Splitter: item enters, will be routed next pass
+      if(nt===T.splitter){if(free(nx,ny,it.id)){it.x=nx;it.y=ny;}continue;}
       if(!BELT_TILES.has(nt)&&nt!==T.output&&nt!==T.rnd)continue;
       if(!free(nx,ny,it.id))continue;
       it.x=nx;it.y=ny;
@@ -479,6 +515,8 @@ const game = (() => {
   function tick(){
     if(state.paused)return;
     state.tickBudget=0;
+    state.rpmTick=(state.rpmTick+1)%60;
+    state.rpmHistory[state.rpmTick]=0;
     for(const m of state.miners){
       if(--m.timer>0)continue;
       m.timer=state.minerInterval;
@@ -486,7 +524,7 @@ const game = (() => {
       for(const n of adj){
         if(!inBounds(n.x,n.y))continue;
         const nt=state.grid[n.y][n.x];
-        if(!BELT_TILES.has(nt)&&!PROC_TILES.has(nt)&&nt!==T.output&&nt!==T.rnd)continue;
+        if(!BELT_TILES.has(nt)&&!PROC_TILES.has(nt)&&nt!==T.output&&nt!==T.rnd&&nt!==T.splitter)continue; // miners can output to splitters
         if(state.items.find(i=>i.x===n.x&&i.y===n.y))continue;
         state.items.push({id:state.nextId++,x:n.x,y:n.y,type:m.type,value:REQ[m.type].value,stage:0,delay:0,pdx:0,pdy:0});
         break;
@@ -502,9 +540,8 @@ const game = (() => {
         if(cfg){
           if(cfg.outStage>=0)it.stage=cfg.outStage;
           if(cfg.valueMult!=null){
-            const m=it.type===cfg.specType?cfg.valueMult:(cfg.baseMult??1);
-            it.value=Math.round(it.value*m);
-            eventLog(`✅ ${REQ[it.type].icon} ×${m.toFixed(1)}→${it.value} CZK`,'good');
+            it.value=Math.round(it.value*cfg.valueMult);
+            eventLog(`✅ ${REQ[it.type].icon} ×${cfg.valueMult}→${it.value} CZK`,'good');
           } else {
             eventLog(`✅ ${REQ[it.type].icon}→${STAGE_LABEL[it.stage]}`,'good');
           }
@@ -612,7 +649,8 @@ const game = (() => {
     $('chip-bugs').querySelector('.stat-label').textContent='Belt/Proc';
     $('chip-bugs').classList.remove('warn');$('chip-bugs').style.cssText='';
     const set=(id,v)=>{const el=$(id);if(el)el.textContent=v;};
-    set('m-bps',fmt(s.tickBudget)+' CZK');set('m-deploys',s.totalDeploys);
+    const rpm=s.rpmHistory.reduce((a,b)=>a+b,0);
+    set('m-bps',fmt(s.tickBudget)+' CZK');set('m-deploys',s.totalDeploys);set('m-rpm',rpm+'/min');
     set('m-miners',s.miners.length);set('m-procs',procs);
     set('m-items',s.items.length);set('m-mult','×'+s.globalMult.toFixed(2));
     set('m-int',s.minerInterval+'s / '+(s.beltPasses>1?'×2':'×1'));
@@ -654,6 +692,7 @@ const game = (() => {
     state.beltTickMs=d.beltTickMs??1000;state.hanaCloudMult=d.hanaCloudMult??1.0;
     // Always ensure base-tier buildings are unlocked
     state.unlocked.add('sm36');state.unlocked.add('oss');
+    state.splitterCtrs={};state.rpmHistory=new Array(60).fill(0);state.rpmTick=0;
     restartTick(state.beltTickMs);
     clearItemEls();renderGrid();renderItems();buildResearchPanel();updateUI();
     // close whichever overlay is open (title or pause menu)
@@ -669,7 +708,9 @@ const game = (() => {
     state.grid=genMap();state.items=[];state.miners=[];state.nextId=0;
     state.researched=new Set();state.unlocked=new Set(['compiler','qa_gate','sm36','oss']);
     state.rp=0;state.rpMilestonesHit=new Set();
-    state.beltTickMs=1000;state.hanaCloudMult=1.0;restartTick(1000);
+    state.beltTickMs=1000;state.hanaCloudMult=1.0;
+    state.splitterCtrs={};state.rpmHistory=new Array(60).fill(0);state.rpmTick=0;
+    restartTick(1000);
     state.minerInterval=3;state.globalMult=1.0;state.beltPasses=1;
     state.autoBuildings={ service_desk:0, problem_mgmt:0, cab:0 };
     state.abTimers={ service_desk:3, problem_mgmt:5, cab:8 };
@@ -799,6 +840,7 @@ const game = (() => {
     if(k==='u'){selectTool('stms');return;}
     if(k==='i'){selectTool('oss');return;}
     if(k==='o'){selectTool('bw_dtp');return;}
+    if(k==='f'){selectTool('splitter');return;}
   });
 
   // ── TICK MANAGEMENT ────────────────────────────────────────────────────────
