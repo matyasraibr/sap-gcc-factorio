@@ -174,19 +174,18 @@
             <div id="hotbar-wrap">
                 <!-- Belt mode switcher -->
                 <div id="belt-mode-bar">
-                    <span class="bm-label">Belt mode:</span>
-                    <button class="bm-btn bm-active" id="bmb-generic" onclick="game.setBeltMode('generic')" title="Tab">⬜ Generic</button>
-                    <button class="bm-btn bm-inc"    id="bmb-inc"     onclick="game.setBeltMode('inc')"     title="Tab">🔵 INC</button>
-                    <button class="bm-btn bm-prb"    id="bmb-prb"     onclick="game.setBeltMode('prb')"     title="Tab">🟠 PRB</button>
-                    <button class="bm-btn bm-chg"    id="bmb-chg"     onclick="game.setBeltMode('chg')"     title="Tab">🟣 CHG</button>
-                    <span class="bm-hint"><kbd>Tab</kbd> přepne</span>
+                    <span class="bm-label">Belt:</span>
+                    <button class="bm-btn bm-inc bm-active" id="bmb-inc" onclick="game.setBeltMode('inc')" title="Tab">🔵 INC</button>
+                    <button class="bm-btn bm-prb"           id="bmb-prb" onclick="game.setBeltMode('prb')" title="Tab">🟠 PRB</button>
+                    <button class="bm-btn bm-chg"           id="bmb-chg" onclick="game.setBeltMode('chg')" title="Tab">🟣 CHG</button>
+                    <span class="bm-hint"><kbd>Tab</kbd> přepne · WASD pokládá</span>
                 </div>
                 <div id="hotbar">
-                    <div class="hb-slot hb-active" data-tool="miner"   title="Miner [Q]"       onclick="game.selectTool('miner')"><kbd>Q</kbd><span>⛏</span></div>
-                    <div class="hb-slot" id="hb-belt-w" data-tool="b_u" title="Belt ↑ [W]"     onclick="game.selectTool('b_u')"><kbd>W</kbd><span id="hbi-w">▲</span></div>
-                    <div class="hb-slot" id="hb-belt-d" data-tool="b_r" title="Belt → [D]"     onclick="game.selectTool('b_r')"><kbd>D</kbd><span id="hbi-d">▶</span></div>
-                    <div class="hb-slot" id="hb-belt-s" data-tool="b_d" title="Belt ↓ [S]"     onclick="game.selectTool('b_d')"><kbd>S</kbd><span id="hbi-s">▼</span></div>
-                    <div class="hb-slot" id="hb-belt-a" data-tool="b_l" title="Belt ← [A]"     onclick="game.selectTool('b_l')"><kbd>A</kbd><span id="hbi-a">◀</span></div>
+                    <div class="hb-slot hb-active" data-tool="miner" title="Miner [Q]" onclick="game.selectTool('miner')"><kbd>Q</kbd><span>⛏</span></div>
+                    <div class="hb-slot hb-inc" id="hb-belt-w" data-tool="bi_u" title="Belt ↑ [W]" onclick="game.selectTool('bi_u')"><kbd>W</kbd><span id="hbi-w">▲</span></div>
+                    <div class="hb-slot hb-inc" id="hb-belt-d" data-tool="bi_r" title="Belt → [D]" onclick="game.selectTool('bi_r')"><kbd>D</kbd><span id="hbi-d">▶</span></div>
+                    <div class="hb-slot hb-inc" id="hb-belt-s" data-tool="bi_d" title="Belt ↓ [S]" onclick="game.selectTool('bi_d')"><kbd>S</kbd><span id="hbi-s">▼</span></div>
+                    <div class="hb-slot hb-inc" id="hb-belt-a" data-tool="bi_l" title="Belt ← [A]" onclick="game.selectTool('bi_l')"><kbd>A</kbd><span id="hbi-a">◀</span></div>
                     <div class="hb-sep"></div>
                     <div class="hb-slot" data-tool="compiler"     title="Compiler [E]"          onclick="game.selectTool('compiler')"><kbd>E</kbd><span>⚙</span></div>
                     <div class="hb-slot" data-tool="qa_gate"      title="QA Gate [R]"           onclick="game.selectTool('qa_gate')"><kbd>R</kbd><span>✔</span></div>
@@ -433,31 +432,34 @@
 
             <!-- LOGISTICS -->
             <div class="bm-tab-body hidden" id="bmt-logistics">
+                <div class="bm-section-label">🔵 INC Belty · 12 CZK</div>
                 <div class="bm-items bm-items-grid">
-                    <div class="bm-item" data-tool="b_u" data-cost="4" onclick="game.selectTool('b_u')">
-                        <kbd class="bm-key">W/↑</kbd><div class="bm-icon">▲</div>
-                        <div class="bm-info"><span class="bm-name">Belt ↑</span><span class="bm-desc">4 CZK</span></div>
-                    </div>
-                    <div class="bm-item" data-tool="b_r" data-cost="4" onclick="game.selectTool('b_r')">
-                        <kbd class="bm-key">D/→</kbd><div class="bm-icon">▶</div>
-                        <div class="bm-info"><span class="bm-name">Belt →</span><span class="bm-desc">4 CZK</span></div>
-                    </div>
-                    <div class="bm-item" data-tool="b_d" data-cost="4" onclick="game.selectTool('b_d')">
-                        <kbd class="bm-key">S/↓</kbd><div class="bm-icon">▼</div>
-                        <div class="bm-info"><span class="bm-name">Belt ↓</span><span class="bm-desc">4 CZK</span></div>
-                    </div>
-                    <div class="bm-item" data-tool="b_l" data-cost="4" onclick="game.selectTool('b_l')">
-                        <kbd class="bm-key">A/←</kbd><div class="bm-icon">◀</div>
-                        <div class="bm-info"><span class="bm-name">Belt ←</span><span class="bm-desc">4 CZK</span></div>
-                    </div>
+                    <div class="bm-item" data-tool="bi_u" data-cost="12" onclick="game.selectTool('bi_u')"><kbd class="bm-key">W</kbd><div class="bm-icon" style="color:#4a90d0">▲</div><div class="bm-info"><span class="bm-name">INC ↑</span></div></div>
+                    <div class="bm-item" data-tool="bi_r" data-cost="12" onclick="game.selectTool('bi_r')"><kbd class="bm-key">D</kbd><div class="bm-icon" style="color:#4a90d0">▶</div><div class="bm-info"><span class="bm-name">INC →</span></div></div>
+                    <div class="bm-item" data-tool="bi_d" data-cost="12" onclick="game.selectTool('bi_d')"><kbd class="bm-key">S</kbd><div class="bm-icon" style="color:#4a90d0">▼</div><div class="bm-info"><span class="bm-name">INC ↓</span></div></div>
+                    <div class="bm-item" data-tool="bi_l" data-cost="12" onclick="game.selectTool('bi_l')"><kbd class="bm-key">A</kbd><div class="bm-icon" style="color:#4a90d0">◀</div><div class="bm-info"><span class="bm-name">INC ←</span></div></div>
                 </div>
-                <div class="bm-items bm-items-grid" style="margin-top:6px">
-                    <div class="bm-item" data-tool="splitter" data-cost="20" onclick="game.selectTool('splitter')">
+                <div class="bm-section-label">🟠 PRB Belty · 20 CZK</div>
+                <div class="bm-items bm-items-grid">
+                    <div class="bm-item" data-tool="bp_u" data-cost="20" onclick="game.selectTool('bp_u')"><kbd class="bm-key">W</kbd><div class="bm-icon" style="color:#c06000">▲</div><div class="bm-info"><span class="bm-name">PRB ↑</span></div></div>
+                    <div class="bm-item" data-tool="bp_r" data-cost="20" onclick="game.selectTool('bp_r')"><kbd class="bm-key">D</kbd><div class="bm-icon" style="color:#c06000">▶</div><div class="bm-info"><span class="bm-name">PRB →</span></div></div>
+                    <div class="bm-item" data-tool="bp_d" data-cost="20" onclick="game.selectTool('bp_d')"><kbd class="bm-key">S</kbd><div class="bm-icon" style="color:#c06000">▼</div><div class="bm-info"><span class="bm-name">PRB ↓</span></div></div>
+                    <div class="bm-item" data-tool="bp_l" data-cost="20" onclick="game.selectTool('bp_l')"><kbd class="bm-key">A</kbd><div class="bm-icon" style="color:#c06000">◀</div><div class="bm-info"><span class="bm-name">PRB ←</span></div></div>
+                </div>
+                <div class="bm-section-label">🟣 CHG Belty · 35 CZK</div>
+                <div class="bm-items bm-items-grid">
+                    <div class="bm-item" data-tool="bc_u" data-cost="35" onclick="game.selectTool('bc_u')"><kbd class="bm-key">W</kbd><div class="bm-icon" style="color:#a060e0">▲</div><div class="bm-info"><span class="bm-name">CHG ↑</span></div></div>
+                    <div class="bm-item" data-tool="bc_r" data-cost="35" onclick="game.selectTool('bc_r')"><kbd class="bm-key">D</kbd><div class="bm-icon" style="color:#a060e0">▶</div><div class="bm-info"><span class="bm-name">CHG →</span></div></div>
+                    <div class="bm-item" data-tool="bc_d" data-cost="35" onclick="game.selectTool('bc_d')"><kbd class="bm-key">S</kbd><div class="bm-icon" style="color:#a060e0">▼</div><div class="bm-info"><span class="bm-name">CHG ↓</span></div></div>
+                    <div class="bm-item" data-tool="bc_l" data-cost="35" onclick="game.selectTool('bc_l')"><kbd class="bm-key">A</kbd><div class="bm-icon" style="color:#a060e0">◀</div><div class="bm-info"><span class="bm-name">CHG ←</span></div></div>
+                </div>
+                <div class="bm-items bm-items-grid" style="margin-top:4px">
+                    <div class="bm-item" data-tool="splitter" data-cost="60" onclick="game.selectTool('splitter')">
                         <kbd class="bm-key">F</kbd><div class="bm-icon">⊕</div>
-                        <div class="bm-info"><span class="bm-name">Splitter</span><span class="bm-desc">Round-robin na 2+ výstupy</span></div>
+                        <div class="bm-info"><span class="bm-name">Splitter</span><span class="bm-desc">Round-robin rozdělí tok</span></div>
                     </div>
                 </div>
-                <div class="bm-milestone"><div class="bm-ms-item"><span>🔓 150 RP:</span><span>Express Belts 2× Speed</span></div></div>
+                <div class="bm-milestone"><div class="bm-ms-item"><span>🔓 150 RP:</span><span>Express Belts 2×</span></div></div>
             </div>
 
             <!-- INFRASTRUCTURE -->

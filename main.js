@@ -369,6 +369,7 @@ const game = (() => {
     }
     if(BELT_TILES.has(tool)){
       if(t!==T.empty){toast('Belt jen na prázdné pole!');return;}
+      if(tool==='b_r'||tool==='b_l'||tool==='b_d'||tool==='b_u'){toast('Použij ore-specifický belt (Tab = přepnutí modu)');return;}
       const beltCost=tool.startsWith('bi')?COSTS.belt_i:tool.startsWith('bp')?COSTS.belt_p:tool.startsWith('bc')?COSTS.belt_c:COSTS.belt;
       if(state.budget<beltCost){toast(`❌ Potřebuješ ${beltCost} CZK`);return;}
       state.budget-=beltCost;state.grid[y][x]=tool;
@@ -414,10 +415,13 @@ const game = (() => {
     const locked=PROC_TILES.has(T[tool])&&!state.unlocked.has(tool);
     const hints={
       miner:`⛏ Klikni na ore patch · každé ${state.minerInterval}s · 150 CZK  [Q]`,
-      b_r:'▶ Belt doprava · 8 CZK  [D / →]',
-      b_l:'◀ Belt doleva · 8 CZK  [A / ←]',
-      b_d:'▼ Belt dolů · 8 CZK  [S / ↓]',
-      b_u:'▲ Belt nahoru · 8 CZK  [W / ↑]',
+      b_r:'▶',b_l:'◀',b_d:'▼',b_u:'▲',
+      bi_r:'🔵▶ INC Belt → · 12 CZK  [D]', bi_l:'🔵◀ INC Belt ← · 12 CZK  [A]',
+      bi_d:'🔵▼ INC Belt ↓ · 12 CZK  [S]', bi_u:'🔵▲ INC Belt ↑ · 12 CZK  [W]',
+      bp_r:'🟠▶ PRB Belt → · 20 CZK  [D]', bp_l:'🟠◀ PRB Belt ← · 20 CZK  [A]',
+      bp_d:'🟠▼ PRB Belt ↓ · 20 CZK  [S]', bp_u:'🟠▲ PRB Belt ↑ · 20 CZK  [W]',
+      bc_r:'🟣▶ CHG Belt → · 35 CZK  [D]', bc_l:'🟣◀ CHG Belt ← · 35 CZK  [A]',
+      bc_d:'🟣▼ CHG Belt ↓ · 35 CZK  [S]', bc_u:'🟣▲ CHG Belt ↑ · 35 CZK  [W]',
       compiler:`⚙ ABAP Compiler · RAW→TR · ${PROC_CFG[T.compiler].ticks}s · ×1.5 · 300 CZK  [E]`,
       qa_gate:`✔ QA Gate · TR→QA✓ · ${PROC_CFG[T.qa_gate].ticks}s · ×2.1 · 200 CZK  [R]`,
       change_board:locked?'📋 Change Board · 🔒 50 RP nutné [T]':`📋 Change Board · QA✓→CR✓ · ×3.2 · 500 CZK  [T]`,
@@ -501,11 +505,11 @@ const game = (() => {
 
   // ── BELT MODE ─────────────────────────────────────────────────────────────
   // Tracks which ore-type belt WASD currently places: generic | inc | prb | chg
-  const BELT_MODES = ['generic','inc','prb','chg'];
-  const BELT_MODE_PREFIX = { generic:'b', inc:'bi', prb:'bp', chg:'bc' };
-  const BELT_MODE_LABEL  = { generic:'⬜ Generic', inc:'🔵 INC', prb:'🟠 PRB', chg:'🟣 CHG' };
-  const BELT_MODE_CLS    = { generic:'', inc:'hb-inc', prb:'hb-prb', chg:'hb-chg' };
-  let _beltMode = 'generic';
+  const BELT_MODES = ['inc','prb','chg'];
+  const BELT_MODE_PREFIX = { inc:'bi', prb:'bp', chg:'bc' };
+  const BELT_MODE_LABEL  = { inc:'🔵 INC', prb:'🟠 PRB', chg:'🟣 CHG' };
+  const BELT_MODE_CLS    = { inc:'hb-inc', prb:'hb-prb', chg:'hb-chg' };
+  let _beltMode = 'inc';
 
   function setBeltMode(mode){
     _beltMode=mode;
@@ -526,10 +530,9 @@ const game = (() => {
     // Update mode bar buttons
     document.querySelectorAll('.bm-btn').forEach(b=>b.classList.remove('bm-active'));
     const active=$(`bmb-${mode}`);if(active)active.classList.add('bm-active');
-    // If currently placing a belt, switch its direction to new mode
+    // If currently placing a belt, switch to same direction in new mode
     if(BELT_TILES.has(state.tool)){
       const dir=state.tool.slice(-1); // r/l/d/u
-      const dirs={r:'b_r',l:'b_l',d:'b_d',u:'b_u'};
       const newTool=`${pfx}_${dir}`;
       if(T[newTool])selectTool(newTool);
     }
