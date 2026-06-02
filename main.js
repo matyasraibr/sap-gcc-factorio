@@ -162,7 +162,39 @@ const game = (() => {
   function renderGrid() {
     for (let y=0;y<ROWS;y++) for (let x=0;x<COLS;x++) {
       const t=state.grid[y][x],el=cellEls[y][x];
-      el.className=`gc t-${t}`; el.textContent=TILE_ICON[t]??'';
+      el.className=`gc t-${t}`;
+      // Processor tiles get a progress-bar child; others use plain textContent
+      if(PROC_TILES.has(t)){
+        el.innerHTML=`${TILE_ICON[t]??''}<span class="proc-bar"></span>`;
+      } else {
+        el.textContent=TILE_ICON[t]??'';
+      }
+    }
+  }
+
+  function renderProcessors(){
+    // Build lookup of items currently being processed (delay>0 on a proc tile)
+    const active=new Map();
+    for(const it of state.items){
+      if(it.delay>0&&PROC_TILES.has(state.grid[it.y]?.[it.x]))
+        active.set(it.y*COLS+it.x, it);
+    }
+    for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){
+      if(!PROC_TILES.has(state.grid[y][x]))continue;
+      const el=cellEls[y][x];
+      const bar=el.querySelector('.proc-bar');
+      if(!bar)continue;
+      const it=active.get(y*COLS+x);
+      if(it){
+        const mt=PROC_CFG[state.grid[y][x]]?.ticks||1;
+        bar.style.transform=`scaleX(${mt>0?((mt-it.delay)/mt).toFixed(3):1})`;
+        bar.className=`proc-bar pb-${it.type}`;
+        el.classList.add('proc-active');
+      } else {
+        bar.style.transform='scaleX(0)';
+        bar.className='proc-bar';
+        el.classList.remove('proc-active');
+      }
     }
   }
 
@@ -456,7 +488,7 @@ const game = (() => {
     doMovePass();
     if(state.beltPasses>=2)doMovePass();
     checkMilestones();
-    renderItems();updateUI();
+    renderItems();renderProcessors();updateUI();
   }
 
   function flashPRD(){
