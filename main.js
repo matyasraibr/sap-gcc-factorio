@@ -5,7 +5,7 @@ function toggleSection(el) {
 }
 
 const game = (() => {
-  const COLS = 40, ROWS = 20, T_PX = 40;
+  const COLS = 20, ROWS = 10, T_PX = 48;
 
   const T = {
     empty:'empty', output:'output',
@@ -13,17 +13,15 @@ const game = (() => {
     min_i:'min_i',  min_p:'min_p',  min_c:'min_c',
     b_r:'b_r', b_l:'b_l', b_d:'b_d', b_u:'b_u',
     compiler:'compiler', qa_gate:'qa_gate',
-    change_board:'change_board', hana_db:'hana_db', rnd:'rnd',
-    sm36:'sm36', stms:'stms', oss:'oss', bw_dtp:'bw_dtp',
-    splitter:'splitter',
+    change_board:'change_board', hana_db:'hana_db',
+    sm36:'sm36', stms:'stms', oss:'oss', bw_dtp:'bw_dtp', splitter:'splitter', rnd:'rnd',
   };
 
   const ORE_TILES  = new Set([T.ore_i, T.ore_p, T.ore_c]);
   const MIN_TILES  = new Set([T.min_i, T.min_p, T.min_c]);
   const BELT_TILES = new Set([T.b_r, T.b_l, T.b_d, T.b_u]);
-  const PROC_TILES = new Set([T.compiler, T.qa_gate, T.change_board, T.hana_db, T.sm36, T.stms, T.oss, T.bw_dtp]);
+  const PROC_TILES = new Set([T.compiler, T.qa_gate, T.change_board, T.hana_db]);
   const BELT_MOVE  = { b_r:{dx:1,dy:0}, b_l:{dx:-1,dy:0}, b_d:{dx:0,dy:1}, b_u:{dx:0,dy:-1} };
-
   const ORE_TO_MIN = { ore_i:'min_i', ore_p:'min_p', ore_c:'min_c' };
   const MIN_TO_ORE = { min_i:'ore_i', min_p:'ore_p', min_c:'ore_c' };
   const ORE_TYPE   = { ore_i:'incident', ore_p:'problem', ore_c:'change',
@@ -34,9 +32,9 @@ const game = (() => {
   const STAGE_CLS   = ['','s-tr','s-qa','s-cr','s-hana'];
 
   const REQ = {
-    incident: { value:75,  icon:'INC', cls:'item-inc' },
-    problem:  { value:200, icon:'PRB', cls:'item-prb' },
-    change:   { value:500, icon:'CHG', cls:'item-chg' },
+    incident: { value:50,  icon:'INC', cls:'item-inc' },
+    problem:  { value:150, icon:'PRB', cls:'item-prb' },
+    change:   { value:400, icon:'CHG', cls:'item-chg' },
   };
 
   const PROC_CFG = {
@@ -44,92 +42,64 @@ const game = (() => {
     [T.qa_gate]:      { needStage:1, ticks:1, outStage:2 },
     [T.change_board]: { needStage:2, ticks:3, outStage:3 },
     [T.hana_db]:      { needStage:3, ticks:2, outStage:4 },
-    // BC/BW ore-type-specific pipeline shortcuts — forces dedicated lanes per ore
-    // SM36: INC-only shortcut RAW(0)→QA✓(2), saves Compiler+QA Gate
-    [T.sm36]:   { needStage:0, oreTypes:['incident'], ticks:2, outStage:2 },
-    // STMS: PRB-only shortcut TR(1)→CR✓(3), saves QA+Change Board (needs Compiler first)
-    [T.stms]:   { needStage:1, oreTypes:['problem'],  ticks:3, outStage:3 },
-    // OSS: INC+PRB value booster any stage ×1.4, rejects CHG
-    [T.oss]:    { needStage:-1, oreTypes:['incident','problem'], ticks:1, outStage:-1, valueMult:1.4 },
-    // BW DTP: universal booster for QA✓(2)+ stages, ×1.8
-    [T.bw_dtp]: { needStage:2, ticks:3, outStage:-1, valueMult:1.8 },
   };
+  const PROC_DEFAULTS = { compiler:2, qa_gate:1, change_board:3, hana_db:2 };
+  const COSTS = { miner:100, belt:5, compiler:150, qa_gate:100, change_board:200, hana_db:350 };
 
-  const PROC_DEFAULTS = { compiler:2, qa_gate:1, change_board:3, hana_db:2, sm36:2, stms:3, oss:1, bw_dtp:3 };
-  const COSTS = { miner:80, belt:4, compiler:120, qa_gate:80, change_board:180, hana_db:300, output:250, rnd:400, sm36:200, stms:300, oss:280, bw_dtp:500, splitter:20 };
-  const BELT_CYCLE = ['b_r','b_d','b_u','b_l'];
-  const HOTKEYS = {'1':'miner','2':'b_r','3':'compiler','4':'qa_gate','5':'change_board','6':'hana_db','x':'delete'};
-
-  const AUTO_BUILD_CFG = {
-    service_desk: { oreType:'incident', interval:3, cost:100,  label:'Service Desk',     icon:'🎧', desc:'Auto INC · 3s' },
-    problem_mgmt: { oreType:'problem',  interval:5, cost:300,  label:'Problem Mgmt',      icon:'🔧', desc:'Auto PRB · 5s' },
-    cab:          { oreType:'change',   interval:8, cost:800,  label:'Change Adv. Board', icon:'📋', desc:'Auto CHG · 8s' },
-  };
-
-  // ── RESEARCH TREE ──────────────────────────────────────────────────────────
+  // ── RESEARCH ───────────────────────────────────────────────────────────────
   const RESEARCH = {
-    budget_analyst:  { label:'Budget Analyst',    icon:'💰',  tier:0, desc:'+10% payouts',       cost:250,  req:[],                apply(s){s.globalMult*=1.10} },
-    fast_mining:     { label:'Fast Mining',        icon:'⚡',  tier:0, desc:'Mining 3s → 2s',     cost:300,  req:[],                apply(s){s.minerInterval=2} },
-    fast_compile:    { label:'Fast Compile',       icon:'⚙',  tier:0, desc:'Compiler 2s → 1s',   cost:400,  req:[],                apply(){PROC_CFG[T.compiler].ticks=1} },
-    auto_qa:         { label:'Auto QA',            icon:'🔬', tier:0, desc:'QA Gate instant',     cost:500,  req:[],                apply(){PROC_CFG[T.qa_gate].ticks=0} },
-    cost_optimizer:  { label:'Cost Optimizer',     icon:'💰💰',tier:1, desc:'+20% payouts',       cost:600,  req:['budget_analyst'],apply(s){s.globalMult*=1.20} },
-    turbo_mining:    { label:'Turbo Mining',       icon:'⚡⚡',tier:1, desc:'Mining 2s → 1s',     cost:800,  req:['fast_mining'],   apply(s){s.minerInterval=1} },
-    instant_compile: { label:'Instant Compile',    icon:'⚙⚙', tier:1, desc:'Compiler instant',  cost:1200, req:['fast_compile'],  apply(){PROC_CFG[T.compiler].ticks=0} },
-    ai_optimizer:    { label:'SAP AI Optimizer',   icon:'🤖', tier:2, desc:'Values +30%',         cost:2000, req:['instant_compile'],apply(s){s.globalMult*=1.30} },
-    cloud_integration:{ label:'Cloud Integration', icon:'☁️', tier:3, desc:'×1.5 all values',    cost:4000, req:['ai_optimizer'], apply(s){s.globalMult*=1.50} },
-    devops_pipeline: { label:'DevOps Pipeline',    icon:'🔄', tier:3, desc:'Change Board → 1s',  cost:2500, req:['ai_optimizer'], apply(){PROC_CFG[T.change_board].ticks=1} },
-    belt_booster:    { label:'Belt Speed Booster', icon:'🚄⚡',tier:1, desc:'Belts 25% faster',   cost:0,   rpCost:150, req:[], apply(s){s.beltTickMs=750;restartTick(750);} },
-    extraction_overclock:{ label:'Extraction Overclock',icon:'⛏⚡',tier:1, desc:'Miners −1s interval', cost:300, rpCost:0, req:[], apply(s){s.minerInterval=Math.max(1,s.minerInterval-1);} },
-    ai_inspector:    { label:'AI Quality Inspector',icon:'🤖🔍',tier:2, desc:'QA quality +15%',   cost:0,   rpCost:300, req:['belt_booster'], apply(s){s.globalMult*=1.15;} },
-    hana_cloud:      { label:'HANA Cloud Opt.',    icon:'☁⚡', tier:3, desc:'PRD payouts ×1.5',  cost:1000,rpCost:500, req:['ai_inspector'], apply(s){s.hanaCloudMult=1.5;} },
+    budget_analyst:   { label:'Budget Analyst',    icon:'💰',  tier:0, desc:'+10% payouts',         cost:250,  req:[],                              apply(s){s.globalMult*=1.10} },
+    fast_mining:      { label:'Fast Mining',        icon:'⚡',  tier:0, desc:'Mining 3s → 2s',       cost:300,  req:[],                              apply(s){s.minerInterval=2} },
+    fast_compile:     { label:'Fast Compile',       icon:'⚙',  tier:0, desc:'Compiler 2s → 1s',     cost:400,  req:[],                              apply(){PROC_CFG[T.compiler].ticks=1} },
+    auto_qa:          { label:'Auto QA',            icon:'🔬', tier:0, desc:'QA Gate instant',       cost:500,  req:[],                              apply(){PROC_CFG[T.qa_gate].ticks=0} },
+    cost_optimizer:   { label:'Cost Optimizer',     icon:'💰💰',tier:1, desc:'+20% payouts',         cost:600,  req:['budget_analyst'],              apply(s){s.globalMult*=1.20} },
+    turbo_mining:     { label:'Turbo Mining',       icon:'⚡⚡',tier:1, desc:'Mining 2s → 1s',       cost:800,  req:['fast_mining'],                 apply(s){s.minerInterval=1} },
+    instant_compile:  { label:'Instant Compile',    icon:'⚙⚙', tier:1, desc:'Compiler 1s → 0s',    cost:1200, req:['fast_compile'],                apply(){PROC_CFG[T.compiler].ticks=0} },
+    compliance:       { label:'Compliance Module',  icon:'📋', tier:1, desc:'Odemkne Change Board',  cost:600,  req:['auto_qa'],                     apply(s){s.unlocked.add('change_board')} },
+    belt_express:     { label:'Express Belt',       icon:'🚄', tier:2, desc:'Belty 2× rychleji',     cost:1000, req:['turbo_mining'],                apply(s){s.beltPasses=2} },
+    ai_optimizer:     { label:'SAP AI Optimizer',   icon:'🤖', tier:2, desc:'Hodnoty +30%',          cost:2000, req:['instant_compile','compliance'],apply(s){s.globalMult*=1.30} },
+    hana_module:      { label:'HANA DB Module',     icon:'🗄️', tier:2, desc:'Odemkne HANA DB',       cost:1500, req:['compliance','cost_optimizer'], apply(s){s.unlocked.add('hana_db')} },
+    cloud_integration:{ label:'Cloud Integration',  icon:'☁️', tier:3, desc:'×1.5 všechny hodnoty', cost:4000, req:['ai_optimizer','hana_module'],  apply(s){s.globalMult*=1.50} },
+    devops_pipeline:  { label:'DevOps Pipeline',    icon:'🔄', tier:3, desc:'Change Board 3s → 1s', cost:2500, req:['belt_express','hana_module'],  apply(){PROC_CFG[T.change_board].ticks=1} },
   };
 
-  // RP milestones — auto-unlock when state.rp reaches threshold
-  const RP_MILESTONES=[
-    {rp:50, key:'m50', label:'Automation I — Change Board',        apply(s){s.unlocked.add('change_board');}},
-    {rp:150,key:'m150',label:'Advanced Logistics — Express Belts + STMS',apply(s){s.beltPasses=2;s.unlocked.add('stms');}},
-    {rp:300,key:'m300',label:'BW Integration — BW DTP Processor',  apply(s){s.unlocked.add('bw_dtp');}},
-    {rp:400,key:'m400',label:'High Performance — HANA DB',          apply(s){s.unlocked.add('hana_db');}},
+  // ── KEYBOARD MAP ───────────────────────────────────────────────────────────
+  const KEY_TOOLS = {
+    'q':'miner',
+    'w':'b_u', 'a':'b_l', 's':'b_d', 'd':'b_r',
+    'e':'compiler', 'r':'qa_gate', 't':'change_board', 'y':'hana_db',
+    'x':'delete',
+    'z':'sm36', 'u':'stms', 'i':'oss', 'o':'bw_dtp', 'f':'splitter',
+    'p':'output', 'l':'rnd',   // aliases
+  };
+
+  const MAP_SRC = [
+    '. . . . . . . . . . . . . . . . . . . .',
+    '. . i i i . . . . . . . . . . . . . . .',
+    '. . i i . . . . . . . . . . . . . . . .',
+    '. . . . . . . . . . . . . . . . . . . .',
+    '. . . . . p p p . . . . . . . . O . . .',
+    '. . . . . p p . . . . . . . . . . . . .',
+    '. . . . . . . . . . . . . . . . . . . .',
+    '. . . . . . . . . c c c . . . . . . . .',
+    '. . . . . . . . . c c . . . . . . . . .',
+    '. . . . . . . . . . . . . . . . . . . .',
   ];
 
-  function genMap(){
-    const g=Array.from({length:ROWS},()=>Array(COLS).fill(T.empty));
-    // No pre-placed PRD station — player places all manually via Build Menu
-    // Ore spawns in cols 4..(COLS-3); cols 0-3 = spawn clear
-    function ok(x,y){return x>=4&&x<COLS-2&&y>=0&&y<ROWS&&g[y][x]===T.empty;}
-    function clump(tile,cx,cy){
-      if(!ok(cx,cy))return;
-      g[cy][cx]=tile;
-      const ds=[{dx:1,dy:0},{dx:-1,dy:0},{dx:0,dy:1},{dx:0,dy:-1},{dx:1,dy:1},{dx:-1,dy:1},{dx:1,dy:-1}];
-      ds.sort(()=>Math.random()-.5);
-      let n=1,sz=3+Math.floor(Math.random()*4);
-      for(const d of ds){if(n>=sz)break;if(ok(cx+d.dx,cy+d.dy)){g[cy+d.dy][cx+d.dx]=tile;n++;}}
-    }
-    function rand(tile,x0,x1){
-      let x,y,t=0;
-      do{x=x0+Math.floor(Math.random()*(x1-x0));y=Math.floor(Math.random()*ROWS);t++;}
-      while(!ok(x,y)&&t<40);
-      clump(tile,x,y);
-    }
-    rand(T.ore_i,4,12);rand(T.ore_i,8,20);if(Math.random()>.5)rand(T.ore_i,14,26);
-    rand(T.ore_p,10,22);rand(T.ore_p,16,30);if(Math.random()>.5)rand(T.ore_p,8,24);
-    rand(T.ore_c,18,30);rand(T.ore_c,24,38);
-    return g;
+  function parseMap() {
+    return MAP_SRC.map(r => r.split(' ').map(c =>
+      c==='i'?T.ore_i:c==='p'?T.ore_p:c==='c'?T.ore_c:c==='O'?T.output:T.empty
+    ));
   }
 
   // ── STATE ──────────────────────────────────────────────────────────────────
   const state = {
-    budget:1500, totalDeploys:0, tickBudget:0,
-    grid:genMap(), items:[], miners:[],
-    tool:'miner', nextId:0, rp:0,
-    researched:new Set(), unlocked:new Set(['compiler','qa_gate','sm36','oss']),
-    rpMilestonesHit:new Set(),
-    minerInterval:3, globalMult:1.0, beltPasses:1, beltTickMs:1000, hanaCloudMult:1.0,
-    splitterCtrs:{}, rpmHistory:new Array(60).fill(0), rpmTick:0,
+    budget:500, totalDeploys:0, tickBudget:0,
+    grid:parseMap(), items:[], miners:[],
+    tool:'miner', nextId:0,
+    researched:new Set(), unlocked:new Set(['compiler','qa_gate']),
+    minerInterval:3, globalMult:1.0, beltPasses:1,
     paused:true,
-    autoBuildings:{ service_desk:0, problem_mgmt:0, cab:0 },
-    abTimers:     { service_desk:3, problem_mgmt:5, cab:8 },
-    buildMenuOpen:false,
   };
 
   const $ = id => document.getElementById(id);
@@ -144,9 +114,8 @@ const game = (() => {
 
   function eventLog(msg, cls='') {
     const el=$('event-log'), p=document.createElement('p');
-    if (cls) p.className=cls;
-    p.textContent=msg; el.prepend(p);
-    while (el.children.length>60) el.lastChild.remove();
+    if(cls)p.className=cls; p.textContent=msg; el.prepend(p);
+    while(el.children.length>60)el.lastChild.remove();
   }
 
   function toast(msg, ms=2800) {
@@ -169,46 +138,14 @@ const game = (() => {
     }));
   }
 
-  const TILE_ICON={[T.min_i]:'⛏',[T.min_p]:'⛏',[T.min_c]:'⛏',[T.b_r]:'',[T.b_l]:'',[T.b_d]:'',[T.b_u]:'',
-    [T.output]:'🏭',[T.compiler]:'⚙',[T.qa_gate]:'✔',[T.change_board]:'📋',[T.hana_db]:'🗄',[T.rnd]:'🔬',
-    [T.sm36]:'⏱',[T.stms]:'🚌',[T.oss]:'📝',[T.bw_dtp]:'📊',[T.splitter]:'⊕'};
+  const TILE_ICON={[T.min_i]:'⛏',[T.min_p]:'⛏',[T.min_c]:'⛏',
+    [T.b_r]:'',[T.b_l]:'',[T.b_d]:'',[T.b_u]:'',
+    [T.output]:'🏭',[T.compiler]:'⚙',[T.qa_gate]:'✔',[T.change_board]:'📋',[T.hana_db]:'🗄'};
 
   function renderGrid() {
-    for (let y=0;y<ROWS;y++) for (let x=0;x<COLS;x++) {
+    for(let y=0;y<ROWS;y++) for(let x=0;x<COLS;x++){
       const t=state.grid[y][x],el=cellEls[y][x];
-      el.className=`gc t-${t}`;
-      // Processor tiles get a progress-bar child; others use plain textContent
-      if(PROC_TILES.has(t)){
-        el.innerHTML=`${TILE_ICON[t]??''}<span class="proc-bar"></span>`;
-      } else {
-        el.textContent=TILE_ICON[t]??'';
-      }
-    }
-  }
-
-  function renderProcessors(){
-    // Build lookup of items currently being processed (delay>0 on a proc tile)
-    const active=new Map();
-    for(const it of state.items){
-      if(it.delay>0&&PROC_TILES.has(state.grid[it.y]?.[it.x]))
-        active.set(it.y*COLS+it.x, it);
-    }
-    for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){
-      if(!PROC_TILES.has(state.grid[y][x]))continue;
-      const el=cellEls[y][x];
-      const bar=el.querySelector('.proc-bar');
-      if(!bar)continue;
-      const it=active.get(y*COLS+x);
-      if(it){
-        const mt=PROC_CFG[state.grid[y][x]]?.ticks||1;
-        bar.style.transform=`scaleX(${mt>0?((mt-it.delay)/mt).toFixed(3):1})`;
-        bar.className=`proc-bar pb-${it.type}`;
-        el.classList.add('proc-active');
-      } else {
-        bar.style.transform='scaleX(0)';
-        bar.className='proc-bar';
-        el.classList.remove('proc-active');
-      }
+      el.className=`gc t-${t}`; el.textContent=TILE_ICON[t]??'';
     }
   }
 
@@ -217,7 +154,7 @@ const game = (() => {
     Object.keys(itemEls).forEach(k=>delete itemEls[k]);
   }
 
-  function iLabel(it){ return it.delay>0?'⚙':STAGE_LABEL[it.stage]; }
+  function iLabel(it){return it.delay>0?'⚙':STAGE_LABEL[it.stage];}
   function iCls(it){
     const sc=STAGE_CLS[it.stage]??'';
     return `world-item ${REQ[it.type].cls}${sc?' '+sc:''}${it.delay>0?' proc':''}`;
@@ -225,10 +162,10 @@ const game = (() => {
 
   function renderItems() {
     const live=new Set(state.items.map(i=>i.id));
-    for (const it of state.items) {
-      const lx=it.x*T_PX+T_PX/2-12,ly=it.y*T_PX+T_PX/2-12;
+    for(const it of state.items){
+      const lx=it.x*T_PX+T_PX/2-15,ly=it.y*T_PX+T_PX/2-15;
       const lbl=iLabel(it),cls=iCls(it);
-      if (!itemEls[it.id]) {
+      if(!itemEls[it.id]){
         const el=document.createElement('div');
         el.textContent=lbl;el.className=cls;
         $('game-grid').appendChild(el);
@@ -247,12 +184,12 @@ const game = (() => {
   }
 
   // ── CELL CLICK ─────────────────────────────────────────────────────────────
-  function onCell(x,y) {
+  function onCell(x,y){
     if(state.paused)return;
     const tool=state.tool,t=state.grid[y][x];
     if(tool==='delete'){
       if(MIN_TILES.has(t)){state.miners=state.miners.filter(m=>!(m.x===x&&m.y===y));state.grid[y][x]=MIN_TO_ORE[t];}
-      else if(BELT_TILES.has(t)||PROC_TILES.has(t)||t===T.output||t===T.rnd||t===T.splitter)state.grid[y][x]=T.empty;
+      else if(BELT_TILES.has(t)||PROC_TILES.has(t))state.grid[y][x]=T.empty;
       renderGrid();updateUI();return;
     }
     if(tool==='miner'){
@@ -264,21 +201,13 @@ const game = (() => {
       eventLog(`⛏ Miner [${ORE_TYPE[t].slice(0,3).toUpperCase()}] → (${x},${y})`,'good');
       renderGrid();updateUI();return;
     }
-    if(tool==='output'||tool==='rnd'){
-      if(t!==T.empty){toast('Musí být prázdné pole!');return;}
-      if(state.budget<COSTS[tool]){toast(`❌ Potřebuješ ${COSTS[tool]} CZK`);return;}
-      state.budget-=COSTS[tool];state.grid[y][x]=T[tool];
-      eventLog(`🏗 ${tool==='output'?'PRD Station':'R&D Lab'} (${x},${y})`,'good');
-      renderGrid();updateUI();return;
-    }
     if(PROC_TILES.has(T[tool])){
-      if(!state.unlocked.has(tool)){toast('🔒 Odemkni výzkumem / RP!');return;}
+      if(!state.unlocked.has(tool)){toast('🔒 Odemkni výzkumem!');return;}
       if(t!==T.empty){toast('Musí být prázdné pole!');return;}
       if(state.budget<COSTS[tool]){toast(`❌ Potřebuješ ${COSTS[tool]} CZK`);return;}
       state.budget-=COSTS[tool];state.grid[y][x]=T[tool];
-      const n={compiler:'ABAP Compiler',qa_gate:'QA Gate',change_board:'Change Board',hana_db:'HANA DB',
-               sm36:'SM36 Scheduler',stms:'STMS Router',oss:'OSS Scanner',bw_dtp:'BW DTP'};
-      eventLog(`🏗 ${n[tool]||tool} (${x},${y})`,'good');
+      const n={compiler:'ABAP Compiler',qa_gate:'QA Gate',change_board:'Change Board',hana_db:'HANA DB'};
+      eventLog(`🏗 ${n[tool]} postaven (${x},${y})`,'good');
       renderGrid();updateUI();return;
     }
     if(BELT_TILES.has(tool)){
@@ -287,73 +216,91 @@ const game = (() => {
       state.budget-=COSTS.belt;state.grid[y][x]=tool;
       renderGrid();updateUI();return;
     }
-    if(tool==='splitter'){
-      if(t!==T.empty){toast('Musí být prázdné pole!');return;}
-      if(state.budget<COSTS.splitter){toast(`❌ Potřebuješ ${COSTS.splitter} CZK`);return;}
-      state.budget-=COSTS.splitter;state.grid[y][x]=T.splitter;
-      eventLog(`🏗 Splitter (${x},${y})`,'good');
-      renderGrid();updateUI();return;
-    }
   }
 
   // ── TOOL SELECT ────────────────────────────────────────────────────────────
-  const BELT_ICONS = {b_r:'▶',b_l:'◀',b_d:'▼',b_u:'▲'};
-  const BELT_DIRS  = {b_r:'→',b_l:'←',b_d:'↓',b_u:'↑'};
-
   function selectTool(tool){
     state.tool=tool;
-
-    // Hotbar: activate matching slot (belt slot activates for any belt)
-    document.querySelectorAll('.hb-slot').forEach(el=>{
-      el.classList.toggle('hb-active',
-        el.dataset.tool===tool || (el.dataset.tool==='belt' && BELT_TILES.has(tool)));
-    });
-    // Belt slot: update icon + direction label
-    if(BELT_TILES.has(tool)){
-      const ic=$('hb-belt-icon'); if(ic) ic.textContent=BELT_ICONS[tool];
-      const dc=$('hb-belt-dir');  if(dc) dc.textContent=BELT_DIRS[tool]+' · W↻';
-      HOTKEYS['2']=tool;
-    }
-    // Hotbar locked state for proc buildings
-    ['change_board','hana_db'].forEach(k=>{
-      const locked=!state.unlocked.has(k);
-      const s=$('hb-'+k.replace(/_/g,'-'));
-      if(s){s.classList.toggle('hb-locked',locked);const c=s.querySelector('.hb-cost');if(c)c.textContent=locked?'🔒':`${COSTS[k]}`;}
-    });
-    // Build menu highlight
-    document.querySelectorAll('[data-tool]').forEach(el=>{
-      el.classList.toggle('bm-active', el.dataset.tool===tool);
-    });
-    // Backwards compat: old .tool-btn (no-op if removed)
-    document.querySelectorAll('.tool-btn').forEach(b=>b.classList.remove('active'));
-    const ob=$('t-'+tool.replace(/_/g,'-'));if(ob)ob.classList.add('active');
-
+    // Hotbar active state
+    document.querySelectorAll('.hb-slot').forEach(b=>b.classList.remove('active'));
+    const hbEl=$('hb-'+tool.replace(/_/g,'-'));
+    if(hbEl)hbEl.classList.add('active');
+    // Build menu active state
+    document.querySelectorAll('.bm-item[data-tool]').forEach(el=>
+      el.classList.toggle('bmi-active',el.dataset.tool===tool));
+    // Hint
     const locked=PROC_TILES.has(T[tool])&&!state.unlocked.has(tool);
+    const cfg=PROC_CFG[T[tool]];
     const hints={
-      miner:`⛏ Klikni na ore patch · každé ${state.minerInterval}s · 100 CZK  [Q]`,
-      b_r:'▶ Belt doprava · 5 CZK  [D / →]',
-      b_l:'◀ Belt doleva · 5 CZK  [A / ←]',
-      b_d:'▼ Belt dolů · 5 CZK  [S / ↓]',
-      b_u:'▲ Belt nahoru · 5 CZK  [W / ↑]',
-      compiler:`⚙ ABAP Compiler · RAW→TR · ${PROC_CFG[T.compiler].ticks}s · ×1.5 · 150 CZK  [E]`,
-      qa_gate:`✔ QA Gate · TR→QA✓ · ${PROC_CFG[T.qa_gate].ticks}s · ×2.1 · 100 CZK  [R]`,
-      change_board:locked?'📋 Change Board · 🔒 50 RP nutné [T]':`📋 Change Board · QA✓→CR✓ · ×3.2 · 200 CZK  [T]`,
-      hana_db:locked?'🗄 HANA DB · 🔒 400 RP nutné [Y]':`🗄 HANA DB · CR✓→HANA · ×4.8 · 350 CZK  [Y]`,
-      output:'🏭 PRD Station · Prodej TRek za CZK · 250 CZK  [P]',
-      rnd:'🔬 R&D Lab · TR → Research Points (RP) · 400 CZK  [L]',
-      sm36:'⏱ SM36 Scheduler · INC RAW→QA✓ shortcut · 200 CZK  [Z]',
-      stms:'🚌 STMS Router · PRB TR→CR✓ shortcut (po Compileru) · 300 CZK  [U]',
-      oss:'📝 OSS Scanner · INC+PRB value ×1.4 · CHG odmítá · 280 CZK  [I]',
-      bw_dtp:'📊 BW DTP · QA✓+ stage ×1.8 · 500 CZK  [O]',
-      splitter:'⊕ Splitter · Rozděluje items round-robin na 2+ výstupy · 20 CZK  [F]',
-      delete:'❌ Delete · Smaže budovu nebo belt  [X]',
+      miner:`⛏ [Q] Klikni na ore patch · item každé ${state.minerInterval}s · 100 CZK`,
+      b_r:'▶ [D] Belt doprava · 5 CZK', b_l:'◀ [A] Belt doleva · 5 CZK',
+      b_d:'▼ [S] Belt dolů · 5 CZK',   b_u:'▲ [W] Belt nahoru · 5 CZK',
+      compiler:cfg?`⚙ [E] ABAP Compiler · RAW→TR · ${cfg.ticks}s · ×1.5 · 150 CZK`:'',
+      qa_gate:locked?'✔ [R] QA Gate · 🔒':cfg?`✔ [R] QA Gate · TR→QA✓ · ${cfg.ticks}s · ×1.4 · 100 CZK`:'',
+      change_board:locked?'📋 [T] Change Board · 🔒 Výzkum: Compliance':`📋 [T] Change Board · QA✓→CR✓ · ${PROC_CFG[T.change_board].ticks}s · 200 CZK`,
+      hana_db:locked?'🗄 [Y] HANA DB · 🔒 Výzkum: HANA Module':`🗄 [Y] HANA DB · CR✓→HANA · ${PROC_CFG[T.hana_db].ticks}s · 350 CZK`,
+      delete:'❌ [X] Smaže budovu nebo belt (zdarma)',
     };
     $('tool-hint').textContent=hints[tool]??'';
   }
 
-  function cycleBelt(){
-    const idx=BELT_CYCLE.indexOf(state.tool);
-    selectTool(BELT_CYCLE[idx>=0?(idx+1)%BELT_CYCLE.length:0]);
+  // ── BUILD MENU ─────────────────────────────────────────────────────────────
+  function updateBuildMenu(){
+    // Lock/unlock proc items
+    document.querySelectorAll('.bm-item[data-lock]').forEach(el=>{
+      const locked=!state.unlocked.has(el.dataset.lock);
+      el.classList.toggle('bm-locked',locked);
+    });
+    // Affordability (dim if can't afford but not locked)
+    document.querySelectorAll('.bm-item[data-cost]').forEach(el=>{
+      const cost=parseInt(el.dataset.cost)||0;
+      const locked=el.classList.contains('bm-locked');
+      el.classList.toggle('bm-dim',!locked&&cost>0&&state.budget<cost);
+    });
+    // Active tool highlight
+    document.querySelectorAll('.bm-item[data-tool]').forEach(el=>
+      el.classList.toggle('bmi-active',el.dataset.tool===state.tool));
+  }
+
+  let _bmOutsideHandler=null;
+
+  function openBuildMenu(){
+    updateBuildMenu();
+    const bm=$('build-menu-modal');
+    if(bm)bm.classList.remove('hidden');
+  }
+
+  function closeBuildMenu(){
+    const bm=$('build-menu-modal');
+    if(bm)bm.classList.add('hidden');
+  }
+
+  function toggleBuildMenu(){
+    const bm=$('build-menu-modal');
+    if(!bm)return;
+    if(bm.classList.contains('hidden'))openBuildMenu();
+    else closeBuildMenu();
+  }
+
+  function bmTab(tabName){
+    // Deactivate all tabs and hide all bodies
+    document.querySelectorAll('.bm-tab').forEach(t=>t.classList.remove('bm-tab-active'));
+    document.querySelectorAll('.bm-tab-body').forEach(b=>b.classList.add('hidden'));
+    // Activate selected tab and show body
+    const tab=document.querySelector(`[data-tab="${tabName}"]`);
+    const body=$(`bmt-${tabName}`);
+    if(tab)tab.classList.add('bm-tab-active');
+    if(body)body.classList.remove('hidden');
+  }
+
+  function purchaseBuilding(buildingKey){
+    const costMap={service_desk:100,problem_mgmt:300,cab:800};
+    const cost=costMap[buildingKey]||0;
+    if(state.budget<cost){toast(`❌ Potřebuješ ${cost} CZK`);return;}
+    state.budget-=cost;
+    eventLog(`🏗 ${buildingKey} koupen`,'good');
+    toast(`✅ Nákup hotov!`);
+    updateUI();
   }
 
   // ── RESEARCH ───────────────────────────────────────────────────────────────
@@ -363,8 +310,7 @@ const game = (() => {
     for(const[key,r]of Object.entries(RESEARCH)){
       const el=document.createElement('div');
       el.id=`res-${key}`;el.className=`res-item tier-${r.tier}`;
-      const cLbl=r.rpCost?`${r.rpCost} RP${r.cost?'+'+r.cost:''}`:`${r.cost} CZK`;
-      el.innerHTML=`<div class="res-row"><span class="res-icon">${r.icon}</span><div class="res-text"><span class="res-name">${r.label}</span><span class="res-desc">${r.desc}</span></div><button class="res-btn" onclick="game.research('${key}')">${cLbl}</button></div>`;
+      el.innerHTML=`<div class="res-row"><span class="res-icon">${r.icon}</span><div class="res-text"><span class="res-name">${r.label}</span><span class="res-desc">${r.desc}</span></div><button class="res-btn" onclick="game.research('${key}')">${r.cost}</button></div>`;
       list.appendChild(el);
     }
     renderResearch();
@@ -376,48 +322,25 @@ const game = (() => {
       const done=state.researched.has(key),locked=r.req.some(k=>!state.researched.has(k));
       el.className=`res-item tier-${r.tier} ${done?'res-done':locked?'res-locked':'res-avail'}`;
       const btn=el.querySelector('.res-btn');
-      const cLbl2=r.rpCost?`${r.rpCost} RP${r.cost?'+'+r.cost:''}`:`${r.cost} CZK`;
-      if(btn){btn.textContent=done?'✓':locked?'🔒':cLbl2;btn.disabled=done||locked;}
+      if(btn){btn.textContent=done?'✓':locked?'🔒':`${r.cost} CZK`;btn.disabled=done||locked;}
     }
+    // Hotbar locked state for proc tools
     ['change_board','hana_db'].forEach(k=>{
-      const btn=$('t-'+k.replace(/_/g,'-'));if(!btn)return;
-      const locked=!state.unlocked.has(k);
-      if(btn.querySelector('small'))btn.querySelector('small').textContent=locked?'🔒 Research':`${COSTS[k]} CZK`;
-      btn.classList.toggle('tool-locked',locked);
+      const slot=$('hb-'+k.replace(/_/g,'-'));
+      if(slot)slot.classList.toggle('hb-locked',!state.unlocked.has(k));
     });
-    // Update hotbar + build menu
-    ['change_board','hana_db','stms','bw_dtp'].forEach(k=>{
-      const locked=!state.unlocked.has(k);
-      const bmi=$('bm-'+k.replace(/_/g,'-'));
-      if(bmi){bmi.classList.toggle('bm-locked',locked);const lc=bmi.querySelector('.bm-lock-cost');if(lc)lc.textContent=locked?'🔒 RP needed':`${COSTS[k]} CZK`;}
-    });
-    const bo=$('build-overlay');if(bo&&!bo.classList.contains('hidden'))updateBuildMenuState();
+    updateBuildMenu();
   }
 
   function research(key){
     const r=RESEARCH[key];
     if(!r||state.researched.has(key))return;
     if(r.req.some(k=>!state.researched.has(k))){toast('🔒 Vyžaduje předchozí výzkum!');return;}
-    const rpCost=r.rpCost??0;
-    if(rpCost>0&&state.rp<rpCost){toast(`❌ Potřebuješ ${rpCost} RP`);return;}
-    if((r.cost??0)>0&&state.budget<r.cost){toast(`❌ Potřebuješ ${r.cost} CZK`);return;}
-    state.budget-=(r.cost??0);if(rpCost>0)state.rp-=rpCost;
-    state.researched.add(key);r.apply(state);
+    if(state.budget<r.cost){toast(`❌ Potřebuješ ${r.cost} CZK`);return;}
+    state.budget-=r.cost;state.researched.add(key);r.apply(state);
     eventLog(`🔬 ${r.label}: ${r.desc}`,'good');
     toast(`✅ ${r.label} dokončen!`);
     renderResearch();updateUI();
-  }
-
-  // ── MILESTONES ─────────────────────────────────────────────────────────────
-  function checkMilestones(){
-    for(const m of RP_MILESTONES){
-      if(!state.rpMilestonesHit.has(m.key)&&state.rp>=m.rp){
-        state.rpMilestonesHit.add(m.key);m.apply(state);
-        eventLog(`🏆 ${m.label} (${m.rp} RP)`,'good');
-        toast(`🏆 ${m.label}`);
-        renderResearch();selectTool(state.tool);
-      }
-    }
   }
 
   // ── GAME TICK ──────────────────────────────────────────────────────────────
@@ -426,20 +349,8 @@ const game = (() => {
 
   function doMovePass(){
     const grid=state.grid,items=state.items;
+    items.sort((a,b)=>(b.x+b.y)-(a.x+a.y));
     const remove=new Set();
-
-    // Sort so items CLOSEST TO THEIR DESTINATION move first — clears path for items behind.
-    // Axis chosen per item based on the belt it's sitting on:
-    //   moving right (+dx): high x first  |  moving left (-dx): low x first
-    //   moving down  (+dy): high y first  |  moving up   (-dy): low y first
-    items.sort((a,b)=>{
-      const ma=BELT_MOVE[grid[a.y]?.[a.x]]??{dx:0,dy:0};
-      const mb=BELT_MOVE[grid[b.y]?.[b.x]]??{dx:0,dy:0};
-      const sa=ma.dx!==0?(ma.dx>0?a.x:-a.x):(ma.dy>0?a.y:-a.y);
-      const sb=mb.dx!==0?(mb.dx>0?b.x:-b.x):(mb.dy>0?b.y:-b.y);
-      return sb-sa;
-    });
-
     for(const it of items){
       if(remove.has(it.id)||it.delay>0)continue;
       const t=grid[it.y][it.x];
@@ -448,41 +359,15 @@ const game = (() => {
         const nx=it.x+it.pdx,ny=it.y+it.pdy;
         if(!inBounds(nx,ny))continue;
         const nt=grid[ny][nx];
-        if(!BELT_TILES.has(nt)&&!PROC_TILES.has(nt)&&nt!==T.output&&nt!==T.rnd&&nt!==T.splitter)continue;
+        if(!BELT_TILES.has(nt)&&!PROC_TILES.has(nt)&&nt!==T.output)continue;
         if(!free(nx,ny,it.id))continue;
         it.x=nx;it.y=ny;it.pdx=0;it.pdy=0;continue;
       }
       if(t===T.output){
-        const payout=Math.floor(it.value*STAGE_MULT[it.stage]*state.globalMult*state.hanaCloudMult);
+        const payout=Math.floor(it.value*STAGE_MULT[it.stage]*state.globalMult);
         state.budget+=payout;state.totalDeploys++;state.tickBudget+=payout;
-        state.rpmHistory[state.rpmTick]++;
         eventLog(`🚀 ${REQ[it.type].icon}[${STAGE_LABEL[it.stage]}] +${payout} CZK`,'good');
         remove.add(it.id);flashPRD();continue;
-      }
-      if(t===T.rnd){
-        const rp=Math.ceil((it.stage+1)*REQ[it.type].value/50);
-        state.rp+=rp;
-        eventLog(`🔬 +${rp} RP [${STAGE_LABEL[it.stage]}]`,'good');
-        remove.add(it.id);continue;
-      }
-      // Splitter: round-robin route to adjacent valid tiles
-      if(t===T.splitter){
-        const dirs=[{dx:1,dy:0},{dx:-1,dy:0},{dx:0,dy:1},{dx:0,dy:-1}];
-        const outs=dirs.filter(d=>{
-          const ox=it.x+d.dx,oy=it.y+d.dy;
-          if(!inBounds(ox,oy))return false;
-          const ot=grid[oy][ox];
-          return BELT_TILES.has(ot)||PROC_TILES.has(ot)||ot===T.output||ot===T.rnd;
-        });
-        if(outs.length){
-          const k=it.y*COLS+it.x;
-          const idx=(state.splitterCtrs[k]||0)%outs.length;
-          state.splitterCtrs[k]=(state.splitterCtrs[k]||0)+1;
-          const d=outs[idx];
-          const ox=it.x+d.dx,oy=it.y+d.dy;
-          if(free(ox,oy,it.id)){it.x=ox;it.y=oy;}
-        }
-        continue;
       }
       const mv=BELT_MOVE[t];if(!mv)continue;
       const nx=it.x+mv.dx,ny=it.y+mv.dy;
@@ -490,22 +375,13 @@ const game = (() => {
       const nt=grid[ny][nx];
       if(PROC_TILES.has(nt)){
         const cfg=PROC_CFG[nt];
-        if(cfg){
-          const stageOk=cfg.needStage<0||it.stage===cfg.needStage;
-          const typeOk=!cfg.oreTypes||cfg.oreTypes.includes(it.type);
-          if(stageOk&&typeOk&&!items.find(i=>i.id!==it.id&&i.x===nx&&i.y===ny)){
-            it.x=nx;it.y=ny;it.pdx=mv.dx;it.pdy=mv.dy;it.delay=cfg.ticks;
-            if(it.delay===0){
-              if(cfg.outStage>=0)it.stage=cfg.outStage;
-              if(cfg.valueMult!=null)it.value=Math.round(it.value*cfg.valueMult);
-            }
-          }
+        if(cfg&&it.stage===cfg.needStage&&!items.find(i=>i.id!==it.id&&i.x===nx&&i.y===ny)){
+          it.x=nx;it.y=ny;it.pdx=mv.dx;it.pdy=mv.dy;it.delay=cfg.ticks;
+          if(it.delay===0){it.stage=cfg.outStage;it.pdx=0;it.pdy=0;}
         }
         continue;
       }
-      // Splitter: item enters, will be routed next pass
-      if(nt===T.splitter){if(free(nx,ny,it.id)){it.x=nx;it.y=ny;}continue;}
-      if(!BELT_TILES.has(nt)&&nt!==T.output&&nt!==T.rnd)continue;
+      if(!BELT_TILES.has(nt)&&nt!==T.output)continue;
       if(!free(nx,ny,it.id))continue;
       it.x=nx;it.y=ny;
     }
@@ -515,8 +391,6 @@ const game = (() => {
   function tick(){
     if(state.paused)return;
     state.tickBudget=0;
-    state.rpmTick=(state.rpmTick+1)%60;
-    state.rpmHistory[state.rpmTick]=0;
     for(const m of state.miners){
       if(--m.timer>0)continue;
       m.timer=state.minerInterval;
@@ -524,34 +398,21 @@ const game = (() => {
       for(const n of adj){
         if(!inBounds(n.x,n.y))continue;
         const nt=state.grid[n.y][n.x];
-        if(!BELT_TILES.has(nt)&&!PROC_TILES.has(nt)&&nt!==T.output&&nt!==T.rnd&&nt!==T.splitter)continue; // miners can output to splitters
+        if(!BELT_TILES.has(nt)&&!PROC_TILES.has(nt)&&nt!==T.output)continue;
         if(state.items.find(i=>i.x===n.x&&i.y===n.y))continue;
         state.items.push({id:state.nextId++,x:n.x,y:n.y,type:m.type,value:REQ[m.type].value,stage:0,delay:0,pdx:0,pdy:0});
         break;
       }
     }
-    for(const[key,cfg]of Object.entries(AUTO_BUILD_CFG)){
-      if(!state.autoBuildings[key])continue;
-      if(--state.abTimers[key]<=0){state.abTimers[key]=cfg.interval;spawnAutoItem(cfg.oreType);}
-    }
     for(const it of state.items){
       if(it.delay>0&&--it.delay===0){
         const cfg=PROC_CFG[state.grid[it.y][it.x]];
-        if(cfg){
-          if(cfg.outStage>=0)it.stage=cfg.outStage;
-          if(cfg.valueMult!=null){
-            it.value=Math.round(it.value*cfg.valueMult);
-            eventLog(`✅ ${REQ[it.type].icon} ×${cfg.valueMult}→${it.value} CZK`,'good');
-          } else {
-            eventLog(`✅ ${REQ[it.type].icon}→${STAGE_LABEL[it.stage]}`,'good');
-          }
-        }
+        if(cfg){it.stage=cfg.outStage;eventLog(`✅ ${REQ[it.type].icon}→${STAGE_LABEL[it.stage]}`,'good');}
       }
     }
     doMovePass();
     if(state.beltPasses>=2)doMovePass();
-    checkMilestones();
-    renderItems();renderProcessors();updateUI();
+    renderItems();updateUI();
   }
 
   function flashPRD(){
@@ -560,80 +421,6 @@ const game = (() => {
         cellEls[y][x].classList.add('prd-flash');
         setTimeout(()=>cellEls[y][x].classList.remove('prd-flash'),400);
       }
-  }
-
-  // ── AUTO-BUILD ─────────────────────────────────────────────────────────────
-  function spawnAutoItem(oreType) {
-    const belts=[];
-    for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++)
-      if(BELT_TILES.has(state.grid[y][x])&&!state.items.find(i=>i.x===x&&i.y===y))
-        belts.push({x,y});
-    if(!belts.length)return;
-    const p=belts[Math.floor(Math.random()*belts.length)];
-    state.items.push({id:state.nextId++,x:p.x,y:p.y,type:oreType,value:REQ[oreType].value,stage:0,delay:0,pdx:0,pdy:0});
-  }
-
-  function purchaseBuilding(key) {
-    const cfg=AUTO_BUILD_CFG[key];if(!cfg)return;
-    if(state.budget<cfg.cost){toast(`❌ Need ${cfg.cost} CZK`);return;}
-    state.budget-=cfg.cost;state.autoBuildings[key]++;
-    const n=state.autoBuildings[key];
-    eventLog(`🏗 ${cfg.icon} ${cfg.label} #${n} active`,'good');
-    toast(`✅ ${cfg.label} #${n} online!`);
-    renderBuildMenu();updateUI();
-  }
-
-  function bmTab(name){
-    document.querySelectorAll('.bm-tab').forEach(t=>t.classList.toggle('bm-tab-active',t.dataset.tab===name));
-    document.querySelectorAll('.bm-tab-body').forEach(b=>b.classList.toggle('hidden',b.id!=='bmt-'+name));
-  }
-
-  function openBuildMenu(){
-    state.buildMenuOpen=true;
-    $('build-menu-modal').classList.remove('hidden');
-    bmTab('production');
-    renderBuildMenu();
-  }
-  function closeBuildMenu(){
-    state.buildMenuOpen=false;
-    $('build-menu-modal').classList.add('hidden');
-    // Reset panel to CSS-centered position for next open
-    const p=$('bm-panel');
-    if(p){p.style.left='';p.style.top='';p.style.transform='';}
-  }
-  function toggleBuildMenu(){ state.buildMenuOpen?closeBuildMenu():openBuildMenu(); }
-
-  function initBMDrag(){
-    const panel=$('bm-panel'),header=$('bm-header');
-    if(!panel||!header)return;
-    let drag=false,ox=0,oy=0;
-    header.addEventListener('mousedown',e=>{
-      e.preventDefault();drag=true;
-      const r=panel.getBoundingClientRect();
-      ox=e.clientX-r.left;oy=e.clientY-r.top;
-      header.style.cursor='grabbing';
-    });
-    document.addEventListener('mousemove',e=>{
-      if(!drag)return;
-      const x=Math.max(0,Math.min(window.innerWidth-panel.offsetWidth,e.clientX-ox));
-      const y=Math.max(0,Math.min(window.innerHeight-panel.offsetHeight,e.clientY-oy));
-      panel.style.left=x+'px';panel.style.top=y+'px';panel.style.transform='none';
-    });
-    document.addEventListener('mouseup',()=>{drag=false;header.style.cursor='grab';});
-  }
-
-  function renderBuildMenu(){
-    // Dim every costed item when budget is insufficient; locked items stay locked regardless
-    document.querySelectorAll('#bm-panel .bm-item[data-cost]').forEach(el=>{
-      if(el.classList.contains('bm-locked'))return;
-      el.classList.toggle('bm-dim', +el.dataset.cost>0 && state.budget<+el.dataset.cost);
-    });
-    // Auto-building counts
-    for(const[key,cfg]of Object.entries(AUTO_BUILD_CFG)){
-      const k=key.replace(/_/g,'-');
-      const cn=$('bmc-'+k);
-      if(cn)cn.textContent=state.autoBuildings[key]?`×${state.autoBuildings[key]}`:'';
-    }
   }
 
   // ── UI UPDATE ──────────────────────────────────────────────────────────────
@@ -645,30 +432,29 @@ const game = (() => {
     $('stat-queue').textContent=s.items.length;
     $('stat-raw').textContent=s.miners.length+' ⛏';
     $('stat-bugs').textContent=belts+'/'+procs;
-    const rpe=$('stat-rp');if(rpe)rpe.textContent=s.rp+' RP';
     $('chip-bugs').querySelector('.stat-label').textContent='Belt/Proc';
     $('chip-bugs').classList.remove('warn');$('chip-bugs').style.cssText='';
     const set=(id,v)=>{const el=$(id);if(el)el.textContent=v;};
-    const rpm=s.rpmHistory.reduce((a,b)=>a+b,0);
-    set('m-bps',fmt(s.tickBudget)+' CZK');set('m-deploys',s.totalDeploys);set('m-rpm',rpm+'/min');
+    set('m-bps',fmt(s.tickBudget)+' CZK');set('m-deploys',s.totalDeploys);
     set('m-miners',s.miners.length);set('m-procs',procs);
     set('m-items',s.items.length);set('m-mult','×'+s.globalMult.toFixed(2));
     set('m-int',s.minerInterval+'s / '+(s.beltPasses>1?'×2':'×1'));
-    if(s.buildMenuOpen)renderBuildMenu();
+    // Affordability on hotbar
+    document.querySelectorAll('.hb-slot[data-cost]').forEach(el=>{
+      const cost=parseInt(el.dataset.cost)||0;
+      el.classList.toggle('hb-broke',s.budget<cost);
+    });
   }
 
   // ── SAVE / LOAD ────────────────────────────────────────────────────────────
   function saveGame(slot){
     const data={
-      v:2, ts:new Date().toLocaleString('cs-CZ'),
-      budget:state.budget, totalDeploys:state.totalDeploys, nextId:state.nextId,
-      minerInterval:state.minerInterval, globalMult:state.globalMult, beltPasses:state.beltPasses,
-      grid:state.grid, items:state.items, miners:state.miners,
-      researched:Array.from(state.researched), unlocked:Array.from(state.unlocked),
+      v:2,ts:new Date().toLocaleString('cs-CZ'),
+      budget:state.budget,totalDeploys:state.totalDeploys,nextId:state.nextId,
+      minerInterval:state.minerInterval,globalMult:state.globalMult,beltPasses:state.beltPasses,
+      grid:state.grid,items:state.items,miners:state.miners,
+      researched:Array.from(state.researched),unlocked:Array.from(state.unlocked),
       procTicks:Object.fromEntries(Object.keys(PROC_DEFAULTS).map(k=>[k,PROC_CFG[T[k]].ticks])),
-      autoBuildings:{...state.autoBuildings}, abTimers:{...state.abTimers},
-      rp:state.rp, rpMilestonesHit:Array.from(state.rpMilestonesHit),
-      beltTickMs:state.beltTickMs, hanaCloudMult:state.hanaCloudMult,
     };
     localStorage.setItem(`sap_save_${slot}`,JSON.stringify(data));
     renderMenuSlots();
@@ -685,17 +471,8 @@ const game = (() => {
     state.beltPasses=d.beltPasses??1;state.tickBudget=0;
     state.grid=d.grid;state.items=d.items;state.miners=d.miners;
     state.researched=new Set(d.researched);state.unlocked=new Set(d.unlocked);
-    if(d.procTicks) Object.keys(d.procTicks).forEach(k=>{ if(T[k]&&PROC_CFG[T[k]]) PROC_CFG[T[k]].ticks=d.procTicks[k]; });
-    state.autoBuildings=d.autoBuildings??{ service_desk:0, problem_mgmt:0, cab:0 };
-    state.abTimers=d.abTimers??{ service_desk:3, problem_mgmt:5, cab:8 };
-    state.rp=d.rp??0;state.rpMilestonesHit=new Set(d.rpMilestonesHit??[]);
-    state.beltTickMs=d.beltTickMs??1000;state.hanaCloudMult=d.hanaCloudMult??1.0;
-    // Always ensure base-tier buildings are unlocked
-    state.unlocked.add('sm36');state.unlocked.add('oss');
-    state.splitterCtrs={};state.rpmHistory=new Array(60).fill(0);state.rpmTick=0;
-    restartTick(state.beltTickMs);
+    if(d.procTicks)Object.keys(d.procTicks).forEach(k=>{if(T[k]&&PROC_CFG[T[k]])PROC_CFG[T[k]].ticks=d.procTicks[k];});
     clearItemEls();renderGrid();renderItems();buildResearchPanel();updateUI();
-    // close whichever overlay is open (title or pause menu)
     ['title-overlay','menu-overlay'].forEach(id=>{const el=$(id);if(el){el.classList.add('hidden');el.style.animation='';}});
     state.paused=false;
     toast(`📂 Načten Slot ${slot+1} (${d.ts})`);
@@ -704,46 +481,38 @@ const game = (() => {
 
   function newGame(){
     if(!confirm('Začít novou hru? Neuložený postup bude ztracen.'))return;
-    state.budget=1500;state.totalDeploys=0;state.tickBudget=0;
-    state.grid=genMap();state.items=[];state.miners=[];state.nextId=0;
-    state.researched=new Set();state.unlocked=new Set(['compiler','qa_gate','sm36','oss']);
-    state.rp=0;state.rpMilestonesHit=new Set();
-    state.beltTickMs=1000;state.hanaCloudMult=1.0;
-    state.splitterCtrs={};state.rpmHistory=new Array(60).fill(0);state.rpmTick=0;
-    restartTick(1000);
+    state.budget=500;state.totalDeploys=0;state.tickBudget=0;
+    state.grid=parseMap();state.items=[];state.miners=[];state.nextId=0;
+    state.researched=new Set();state.unlocked=new Set(['compiler','qa_gate']);
     state.minerInterval=3;state.globalMult=1.0;state.beltPasses=1;
-    state.autoBuildings={ service_desk:0, problem_mgmt:0, cab:0 };
-    state.abTimers={ service_desk:3, problem_mgmt:5, cab:8 };
-    Object.keys(PROC_DEFAULTS).forEach(k=>{ if(T[k]&&PROC_CFG[T[k]]) PROC_CFG[T[k]].ticks=PROC_DEFAULTS[k]; });
+    Object.keys(PROC_DEFAULTS).forEach(k=>{if(T[k]&&PROC_CFG[T[k]])PROC_CFG[T[k]].ticks=PROC_DEFAULTS[k];});
     clearItemEls();renderGrid();renderItems();buildResearchPanel();updateUI();
-    closeMenu();toast('🔄 Nová hra zahájena!');
+    ['title-overlay','menu-overlay'].forEach(id=>{const el=$(id);if(el){el.classList.add('hidden');el.style.animation='';}});
+    state.paused=false;
+    toast('🔄 Nová hra zahájena!');
   }
 
   function getSaveInfo(slot){
     const raw=localStorage.getItem(`sap_save_${slot}`);
     if(!raw)return null;
-    try{ return JSON.parse(raw); }catch{ return null; }
+    try{return JSON.parse(raw);}catch{return null;}
   }
 
   // ── MENU ───────────────────────────────────────────────────────────────────
   function openMenu(){
     state.paused=true;
-    // Update game info panel
     const set=(id,v)=>{const el=$(id);if(el)el.textContent=v;};
-    set('mi-budget', fmt(state.budget)+' CZK');
+    set('mi-budget',fmt(state.budget)+' CZK');
     set('mi-deploys',state.totalDeploys+' deployů');
-    set('mi-research',state.researched.size+'/14 výzkumů · '+state.rp+' RP');
-    set('mi-miners',  state.miners.length+' minerů · '+state.items.length+' items');
+    set('mi-research',state.researched.size+'/13 výzkumů');
+    set('mi-miners',state.miners.length+' minerů · '+state.items.length+' items');
     renderMenuSlots();
-    const ov=$('menu-overlay');
-    ov.classList.remove('hidden');
-    ov.classList.add('menu-open');
+    $('menu-overlay').classList.remove('hidden');
   }
 
   function closeMenu(){
     state.paused=false;
     $('menu-overlay').classList.add('hidden');
-    $('menu-overlay').classList.remove('menu-open');
   }
 
   function renderMenuSlots(){
@@ -757,15 +526,11 @@ const game = (() => {
         const r=(d.researched||[]).length;
         div.innerHTML=
           `<div class="slot-n">${i+1}</div>`+
-          `<div class="slot-info">`+
-            `<span class="slot-budget">${fmt(d.budget)} CZK</span>`+
-            `<span class="slot-meta">${d.totalDeploys} dep · ${r}/13 výzk · ${(d.miners||[]).length} ⛏</span>`+
-            `<span class="slot-ts">${d.ts||'—'}</span>`+
-          `</div>`+
-          `<div class="slot-btns">`+
-            `<button class="slot-btn sb-load" onclick="game.loadGame(${i})">📂 Načíst</button>`+
-            `<button class="slot-btn sb-save" onclick="game.saveGame(${i})">💾</button>`+
-          `</div>`;
+          `<div class="slot-info"><span class="slot-budget">${fmt(d.budget)} CZK</span>`+
+          `<span class="slot-meta">${d.totalDeploys} dep · ${r}/13 výzk · ${(d.miners||[]).length} ⛏</span>`+
+          `<span class="slot-ts">${d.ts||'—'}</span></div>`+
+          `<div class="slot-btns"><button class="slot-btn sb-load" onclick="game.loadGame(${i})">📂 Načíst</button>`+
+          `<button class="slot-btn sb-save" onclick="game.saveGame(${i})">💾</button></div>`;
       } else {
         div.innerHTML=
           `<div class="slot-n dim">${i+1}</div>`+
@@ -778,10 +543,10 @@ const game = (() => {
 
   // ── TITLE SCREEN ───────────────────────────────────────────────────────────
   function titleNewGame(){
-    const el=$('title-overlay'); if(!el)return;
+    const el=$('title-overlay');if(!el)return;
     el.style.animation='title-out .38s ease forwards';
     setTimeout(()=>{el.classList.add('hidden');el.style.animation='';state.paused=false;},380);
-    toast('🎮 Vítej v SAP GCC Factorio! Postav první Miner na ore patch.');
+    toast('🎮 Vítej! Q=Miner · W/A/S/D=Belty · E/R/T/Y=Procesory · B=Katalog');
   }
 
   function renderTitleSlots(){
@@ -796,7 +561,7 @@ const game = (() => {
         div.innerHTML=
           `<div class="ts-top"><span class="ts-n">Slot ${i+1}</span><span class="ts-time">${d.ts||''}</span></div>`+
           `<div class="ts-budget">${fmt(d.budget)} CZK</div>`+
-          `<div class="ts-meta">${d.totalDeploys} dep · ${r}/13 výzk · ${(d.miners||[]).length}⛏</div>`+
+          `<div class="ts-meta">${d.totalDeploys} dep · ${r}/13 · ${(d.miners||[]).length}⛏</div>`+
           `<button class="ts-btn" onclick="game.loadGame(${i})">📂 Načíst</button>`;
       } else {
         div.innerHTML=`<div class="ts-top"><span class="ts-n dim">Slot ${i+1}</span></div><div class="ts-empty">— prázdný —</div>`;
@@ -807,71 +572,54 @@ const game = (() => {
 
   // ── KEYBOARD ───────────────────────────────────────────────────────────────
   document.addEventListener('keydown', e => {
-    if(!$('title-overlay').classList.contains('hidden'))return;
-    if(e.key==='Escape'){
-      if(state.buildMenuOpen){closeBuildMenu();return;}
-      if($('menu-overlay').classList.contains('hidden'))openMenu();
-      else closeMenu();
+    if(e.target.tagName==='INPUT'||e.target.tagName==='BUTTON')return;
+    // Title screen - ignore all except Enter
+    if(!$('title-overlay').classList.contains('hidden')){
+      if(e.key==='Enter'||e.key===' ')titleNewGame();
       return;
     }
-    if((e.ctrlKey||e.metaKey)&&e.key==='s'){
-      e.preventDefault();saveGame(0);if(state.paused)renderMenuSlots();return;
+    // Escape priority: close build menu first, then close pause menu, then open pause menu
+    if(e.key==='Escape'){
+      if(!$('build-menu-modal').classList.contains('hidden')){closeBuildMenu();return;}
+      if(!$('menu-overlay').classList.contains('hidden')){closeMenu();return;}
+      openMenu();return;
     }
+    // B = build menu
+    if(e.key==='b'||e.key==='B'){
+      e.preventDefault();toggleBuildMenu();return;
+    }
+    // 1/2/3 = purchase buildings (when build menu open)
+    if(['1','2','3'].includes(e.key)&&!$('build-menu-modal').classList.contains('hidden')){
+      const map={'1':'service_desk','2':'problem_mgmt','3':'cab'};
+      if(map[e.key])purchaseBuilding(map[e.key]);
+      return;
+    }
+    // Ctrl+S = quick save
+    if((e.ctrlKey||e.metaKey)&&e.key==='s'){
+      e.preventDefault();saveGame(0);return;
+    }
+    // Tool shortcuts (only when not paused, not in menu)
     if(state.paused)return;
-    const k=e.key.toLowerCase();
-    if(k==='b'){toggleBuildMenu();return;}
-    if(k==='1'){purchaseBuilding('service_desk');return;}
-    if(k==='2'){purchaseBuilding('problem_mgmt');return;}
-    if(k==='3'){purchaseBuilding('cab');return;}
-    // Belt directions — WASD and arrow keys
-    if(k==='w'||k==='arrowup'){e.preventDefault();selectTool('b_u');return;}
-    if(k==='d'||k==='arrowright'){e.preventDefault();selectTool('b_r');return;}
-    if(k==='s'||k==='arrowdown'){e.preventDefault();selectTool('b_d');return;}
-    if(k==='a'||k==='arrowleft'){e.preventDefault();selectTool('b_l');return;}
-    if(k==='q'){selectTool('miner');return;}
-    if(k==='e'){selectTool('compiler');return;}
-    if(k==='r'){selectTool('qa_gate');return;}
-    if(k==='t'){selectTool('change_board');return;}
-    if(k==='y'){selectTool('hana_db');return;}
-    if(k==='p'){selectTool('output');return;}
-    if(k==='l'){selectTool('rnd');return;}
-    if(k==='x'){selectTool('delete');return;}
-    if(k==='z'){selectTool('sm36');return;}
-    if(k==='u'){selectTool('stms');return;}
-    if(k==='i'){selectTool('oss');return;}
-    if(k==='o'){selectTool('bw_dtp');return;}
-    if(k==='f'){selectTool('splitter');return;}
+    const tool=KEY_TOOLS[e.key.toLowerCase()];
+    if(tool){
+      e.preventDefault();
+      selectTool(tool);
+      // Close build menu on tool select
+      if(!$('build-menu-modal').classList.contains('hidden'))closeBuildMenu();
+    }
   });
-
-  // ── TICK MANAGEMENT ────────────────────────────────────────────────────────
-  let _tickHandle=null;
-  function updateItemTransition(ms){
-    // CSS transition duration slightly under tick interval → items arrive just before next tick
-    document.documentElement.style.setProperty('--item-ms',(Math.round((ms||1000)*0.93))+'ms');
-  }
-  function restartTick(ms){
-    if(_tickHandle)clearInterval(_tickHandle);
-    _tickHandle=setInterval(tick,ms||1000);
-    updateItemTransition(ms||1000);
-  }
-
-  function toggleTheme(){
-    const light=document.body.classList.toggle('light');
-    const btn=$('theme-btn');if(btn)btn.textContent=light?'🌙 Dark':'☀ Light';
-  }
 
   // ── INIT ───────────────────────────────────────────────────────────────────
   function init(){
     buildGrid();renderGrid();renderItems();buildResearchPanel();updateUI();
     selectTool('miner');
-    initBMDrag();
     renderTitleSlots();
-    eventLog('🎮 Sestav: ⛏→⚙→✔→📋→🗄→🏭 PRD = ×4.8 · Postav PRD Station!','good');
-    eventLog('💡 B=Catalogue · Esc=menu · Ctrl+S=save · P=PRD · L=R&D','good');
-    restartTick(state.beltTickMs);
+    eventLog('🎮 Sestav: ⛏→⚙→✔→📋→🗄→🏭 PRD = ×4.8','good');
+    eventLog('⌨ Q=Miner · WASD=Belt · E/R/T/Y=Proc · B=Katalog · Esc=Menu','good');
+    setInterval(tick,1000);
   }
 
   document.addEventListener('DOMContentLoaded',init);
-  return { selectTool, cycleBelt, bmTab, toggleTheme, research, openMenu, closeMenu, saveGame, loadGame, newGame, titleNewGame,
-           purchaseBuilding, openBuildMenu, closeBuildMenu, toggleBuildMenu };
+  return { selectTool, research, openMenu, closeMenu, saveGame, loadGame, newGame,
+           titleNewGame, toggleBuildMenu, openBuildMenu, closeBuildMenu, bmTab, purchaseBuilding };
 })();

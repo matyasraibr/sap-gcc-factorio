@@ -486,17 +486,48 @@ body:not(.light) #grid-wrapper {
 .proc { opacity:.65; animation:proc-spin .7s linear infinite; }
 @keyframes proc-spin { to { transform:rotate(360deg); } }
 
-/* ===== STATUS BAR ===== */
-#status-bar {
-  display:flex; align-items:center; justify-content:space-between;
-  padding:5px 14px; background:var(--panel); border-top:1px solid var(--border);
-  flex-shrink:0; min-height:32px;
+/* ===== HOTBAR ===== */
+#hotbar {
+  display:flex; align-items:center; justify-content:center;
+  padding:8px 12px; background:var(--panel); border-top:1px solid var(--border);
+  flex-shrink:0; gap:4px; flex-wrap:wrap;
 }
-#status-tool { font-size:.7rem; color:var(--dim); }
-.status-keys { font-size:.58rem; color:var(--dim2); display:flex; gap:4px; align-items:center; }
-.status-keys kbd {
+#hb-slots {
+  display:flex; gap:4px; align-items:center; flex-wrap:wrap; justify-content:center;
+}
+.hb-slot {
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  width:42px; height:42px;
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:4px;
+  cursor:pointer;
+  font-size:.5rem; color:var(--text);
+  transition:all .15s;
+  position:relative;
+}
+.hb-slot:hover { background:var(--raised); border-color:var(--blue2); }
+.hb-slot.active { background:var(--blue); border-color:var(--blue2); box-shadow:0 0 8px var(--blue); }
+.hb-slot.hb-locked { opacity:.3; cursor:not-allowed; }
+.hb-slot.hb-locked:hover { background:var(--surface); border-color:var(--border); }
+.hb-slot kbd {
+  font-size:.42rem; color:var(--dim2); font-family:var(--mono);
+  position:absolute; top:1px; right:2px;
+}
+.hb-slot span { font-size:1.1rem; }
+.hb-spacer { width:1px; height:28px; background:var(--border2); margin:0 2px; }
+.hb-build-btn {
+  padding:6px 12px;
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:4px; color:var(--text); font-size:.65rem; font-weight:600;
+  cursor:pointer; white-space:nowrap;
+  transition:all .15s;
+  font-family:var(--font);
+}
+.hb-build-btn:hover { background:var(--raised); border-color:var(--blue2); }
+.hb-build-btn kbd {
   background:var(--raised); border:1px solid var(--border2);
-  border-radius:3px; padding:0 4px; font-size:.54rem; font-family:var(--mono); color:var(--dim2);
+  border-radius:2px; padding:0 3px; font-size:.5rem; font-family:var(--mono);
+  margin-right:4px;
 }
 
 /* ===== RIGHT PANEL — KPI TILES ===== */
@@ -930,6 +961,10 @@ body.light .chip-budget { background: #e0eeff; border-color: var(--blue); }
 body.light .stat-chip { background: var(--surface); }
 body.light #topbar-stats .stat-value { color: var(--blue); }
 body.light .chip-budget .stat-value { color: var(--blue); }
+body.light .hb-slot { background:var(--raised); color:var(--blue); }
+body.light .hb-slot:hover { background:#e0eeff; }
+body.light .hb-slot.active { background:var(--blue); color:#fff; }
+body.light .hb-build-btn { background:var(--raised); color:var(--blue); }
 
 /* ===== RESOURCE GUIDE ===== */
 .rg-ore { border-radius:5px; overflow:hidden; margin-bottom:3px; border:1px solid var(--border); }
