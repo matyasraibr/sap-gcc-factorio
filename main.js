@@ -493,10 +493,52 @@ const game = (() => {
 
   // ── HOTBAR TOGGLE ──────────────────────────────────────────────────────────
   function toggleHotbar(){
-    const hb=$('hotbar');if(!hb)return;
-    hb.classList.toggle('hb-hidden');
+    const wrap=$('hotbar-wrap');if(!wrap)return;
+    wrap.classList.toggle('hb-wrap-hidden');
     const btn=$('hb-toggle-btn');
-    if(btn)btn.textContent=hb.classList.contains('hb-hidden')?'▲ Tools':'▼ Hide';
+    if(btn)btn.textContent=wrap.classList.contains('hb-wrap-hidden')?'▲':'▼';
+  }
+
+  // ── BELT MODE ─────────────────────────────────────────────────────────────
+  // Tracks which ore-type belt WASD currently places: generic | inc | prb | chg
+  const BELT_MODES = ['generic','inc','prb','chg'];
+  const BELT_MODE_PREFIX = { generic:'b', inc:'bi', prb:'bp', chg:'bc' };
+  const BELT_MODE_LABEL  = { generic:'⬜ Generic', inc:'🔵 INC', prb:'🟠 PRB', chg:'🟣 CHG' };
+  const BELT_MODE_CLS    = { generic:'', inc:'hb-inc', prb:'hb-prb', chg:'hb-chg' };
+  let _beltMode = 'generic';
+
+  function setBeltMode(mode){
+    _beltMode=mode;
+    const pfx=BELT_MODE_PREFIX[mode];
+    // Update the 4 belt hotbar slots to point at the right tool
+    const map={w:'u',d:'r',s:'d',a:'l'};
+    for(const[key,dir]of Object.entries(map)){
+      const slot=$(`hb-belt-${key}`);
+      if(!slot)continue;
+      const tool=`${pfx}_${dir}`;
+      slot.dataset.tool=tool;
+      slot.onclick=()=>game.selectTool(tool);
+      // re-colour slot
+      slot.className='hb-slot'+(BELT_MODE_CLS[mode]?' '+BELT_MODE_CLS[mode]:'');
+      if(state.tool===tool||(state.tool.startsWith(pfx+'_')&&state.tool.endsWith('_'+dir)))
+        slot.classList.add('hb-active');
+    }
+    // Update mode bar buttons
+    document.querySelectorAll('.bm-btn').forEach(b=>b.classList.remove('bm-active'));
+    const active=$(`bmb-${mode}`);if(active)active.classList.add('bm-active');
+    // If currently placing a belt, switch its direction to new mode
+    if(BELT_TILES.has(state.tool)){
+      const dir=state.tool.slice(-1); // r/l/d/u
+      const dirs={r:'b_r',l:'b_l',d:'b_d',u:'b_u'};
+      const newTool=`${pfx}_${dir}`;
+      if(T[newTool])selectTool(newTool);
+    }
+    toast(`Belt mode: ${BELT_MODE_LABEL[mode]} (Tab přepne)`);
+  }
+
+  function cycleBeltMode(){
+    const idx=BELT_MODES.indexOf(_beltMode);
+    setBeltMode(BELT_MODES[(idx+1)%BELT_MODES.length]);
   }
 
   function research(key){
@@ -948,15 +990,17 @@ const game = (() => {
     if(e.key==='ArrowRight'){e.preventDefault();panCamera( 1,0);return;}
 
     if(k==='b'){toggleBuildMenu();return;}
-    if(k==='`'||k==='h'){toggleHotbar();return;}
+    if(k==='`'){toggleHotbar();return;}
+    if(e.key==='Tab'){e.preventDefault();cycleBeltMode();return;}
     if(k==='1'){purchaseBuilding('service_desk');return;}
     if(k==='2'){purchaseBuilding('problem_mgmt');return;}
     if(k==='3'){purchaseBuilding('cab');return;}
-    // WASD = belt directions only
-    if(k==='w'){selectTool('b_u');return;}
-    if(k==='d'){selectTool('b_r');return;}
-    if(k==='s'){selectTool('b_d');return;}
-    if(k==='a'){selectTool('b_l');return;}
+    // WASD = belt in current mode
+    const pfx=BELT_MODE_PREFIX[_beltMode];
+    if(k==='w'){selectTool(`${pfx}_u`);return;}
+    if(k==='d'){selectTool(`${pfx}_r`);return;}
+    if(k==='s'){selectTool(`${pfx}_d`);return;}
+    if(k==='a'){selectTool(`${pfx}_l`);return;}
     if(k==='q'){selectTool('miner');return;}
     if(k==='e'){selectTool('compiler');return;}
     if(k==='r'){selectTool('qa_gate');return;}
@@ -965,13 +1009,8 @@ const game = (() => {
     if(k==='p'){selectTool('output');return;}
     if(k==='l'){selectTool('rnd');return;}
     if(k==='x'){selectTool('delete');return;}
-    if(k==='z'){selectTool('sm36');return;}
-    if(k==='u'){selectTool('stms');return;}
-    if(k==='i'){selectTool('oss');return;}
-    if(k==='o'){selectTool('bw_dtp');return;}
     if(k==='f'){selectTool('splitter');return;}
     if(k==='g'){selectTool('inc_triage');return;}
-    if(k==='h'){selectTool('inc_resolver');return;}
     if(k==='j'){selectTool('inc_closer');return;}
     if(k==='n'){selectTool('prb_analyst');return;}
     if(k==='m'){selectTool('prb_rootcause');return;}
@@ -1099,5 +1138,5 @@ const game = (() => {
 
   document.addEventListener('DOMContentLoaded',init);
   return { selectTool, cycleBelt, bmTab, toggleTheme, research, openMenu, closeMenu, saveGame, loadGame, newGame, titleNewGame,
-           purchaseBuilding, openBuildMenu, closeBuildMenu, toggleBuildMenu, toggleHotbar };
+           purchaseBuilding, openBuildMenu, closeBuildMenu, toggleBuildMenu, toggleHotbar, setBeltMode };
 })();

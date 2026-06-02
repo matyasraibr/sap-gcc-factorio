@@ -172,80 +172,35 @@
             </div>
 
             <div id="hotbar-wrap">
+                <!-- Belt mode switcher -->
+                <div id="belt-mode-bar">
+                    <span class="bm-label">Belt mode:</span>
+                    <button class="bm-btn bm-active" id="bmb-generic" onclick="game.setBeltMode('generic')" title="Tab">⬜ Generic</button>
+                    <button class="bm-btn bm-inc"    id="bmb-inc"     onclick="game.setBeltMode('inc')"     title="Tab">🔵 INC</button>
+                    <button class="bm-btn bm-prb"    id="bmb-prb"     onclick="game.setBeltMode('prb')"     title="Tab">🟠 PRB</button>
+                    <button class="bm-btn bm-chg"    id="bmb-chg"     onclick="game.setBeltMode('chg')"     title="Tab">🟣 CHG</button>
+                    <span class="bm-hint"><kbd>Tab</kbd> přepne</span>
+                </div>
                 <div id="hotbar">
-                    <!-- Basics -->
-                    <div class="hb-group-label">Základní</div>
-                    <div class="hb-slot hb-active" data-tool="miner" title="Miner [Q]" onclick="game.selectTool('miner')"><kbd>Q</kbd><span>⛏</span></div>
-                    <div class="hb-slot hb-delete" data-tool="delete" title="Delete [X]" onclick="game.selectTool('delete')"><kbd>X</kbd><span>❌</span></div>
-                    <div class="hb-slot" data-tool="output" title="PRD Station [P]" onclick="game.selectTool('output')"><kbd>P</kbd><span>🏭</span></div>
-                    <div class="hb-slot" data-tool="splitter" title="Splitter [F]" onclick="game.selectTool('splitter')"><kbd>F</kbd><span>⊕</span></div>
-                    <div class="hb-slot" data-tool="rnd" title="R&D Lab [L]" onclick="game.selectTool('rnd')"><kbd>L</kbd><span>🔬</span></div>
+                    <div class="hb-slot hb-active" data-tool="miner"   title="Miner [Q]"       onclick="game.selectTool('miner')"><kbd>Q</kbd><span>⛏</span></div>
+                    <div class="hb-slot" id="hb-belt-w" data-tool="b_u" title="Belt ↑ [W]"     onclick="game.selectTool('b_u')"><kbd>W</kbd><span id="hbi-w">▲</span></div>
+                    <div class="hb-slot" id="hb-belt-d" data-tool="b_r" title="Belt → [D]"     onclick="game.selectTool('b_r')"><kbd>D</kbd><span id="hbi-d">▶</span></div>
+                    <div class="hb-slot" id="hb-belt-s" data-tool="b_d" title="Belt ↓ [S]"     onclick="game.selectTool('b_d')"><kbd>S</kbd><span id="hbi-s">▼</span></div>
+                    <div class="hb-slot" id="hb-belt-a" data-tool="b_l" title="Belt ← [A]"     onclick="game.selectTool('b_l')"><kbd>A</kbd><span id="hbi-a">◀</span></div>
                     <div class="hb-sep"></div>
-
-                    <!-- Generic belts -->
-                    <div class="hb-group-label">Belt</div>
-                    <div class="hb-slot" data-tool="b_u" title="Belt ↑ [W]" onclick="game.selectTool('b_u')"><kbd>W</kbd><span>▲</span></div>
-                    <div class="hb-slot" data-tool="b_r" title="Belt → [D]" onclick="game.selectTool('b_r')"><kbd>D</kbd><span>▶</span></div>
-                    <div class="hb-slot" data-tool="b_d" title="Belt ↓ [S]" onclick="game.selectTool('b_d')"><kbd>S</kbd><span>▼</span></div>
-                    <div class="hb-slot" data-tool="b_l" title="Belt ← [A]" onclick="game.selectTool('b_l')"><kbd>A</kbd><span>◀</span></div>
-                    <div class="hb-sep"></div>
-
-                    <!-- INC belts -->
-                    <div class="hb-group-label hb-label-inc">INC Belt</div>
-                    <div class="hb-slot hb-inc" data-tool="bi_u" title="INC Belt ↑" onclick="game.selectTool('bi_u')"><span>▲</span></div>
-                    <div class="hb-slot hb-inc" data-tool="bi_r" title="INC Belt →" onclick="game.selectTool('bi_r')"><span>▶</span></div>
-                    <div class="hb-slot hb-inc" data-tool="bi_d" title="INC Belt ↓" onclick="game.selectTool('bi_d')"><span>▼</span></div>
-                    <div class="hb-slot hb-inc" data-tool="bi_l" title="INC Belt ←" onclick="game.selectTool('bi_l')"><span>◀</span></div>
-                    <div class="hb-sep"></div>
-
-                    <!-- PRB belts -->
-                    <div class="hb-group-label hb-label-prb">PRB Belt</div>
-                    <div class="hb-slot hb-prb" data-tool="bp_u" title="PRB Belt ↑" onclick="game.selectTool('bp_u')"><span>▲</span></div>
-                    <div class="hb-slot hb-prb" data-tool="bp_r" title="PRB Belt →" onclick="game.selectTool('bp_r')"><span>▶</span></div>
-                    <div class="hb-slot hb-prb" data-tool="bp_d" title="PRB Belt ↓" onclick="game.selectTool('bp_d')"><span>▼</span></div>
-                    <div class="hb-slot hb-prb" data-tool="bp_l" title="PRB Belt ←" onclick="game.selectTool('bp_l')"><span>◀</span></div>
-                    <div class="hb-sep"></div>
-
-                    <!-- CHG belts -->
-                    <div class="hb-group-label hb-label-chg">CHG Belt</div>
-                    <div class="hb-slot hb-chg" data-tool="bc_u" title="CHG Belt ↑" onclick="game.selectTool('bc_u')"><span>▲</span></div>
-                    <div class="hb-slot hb-chg" data-tool="bc_r" title="CHG Belt →" onclick="game.selectTool('bc_r')"><span>▶</span></div>
-                    <div class="hb-slot hb-chg" data-tool="bc_d" title="CHG Belt ↓" onclick="game.selectTool('bc_d')"><span>▼</span></div>
-                    <div class="hb-slot hb-chg" data-tool="bc_l" title="CHG Belt ←" onclick="game.selectTool('bc_l')"><span>◀</span></div>
-                    <div class="hb-sep"></div>
-
-                    <!-- Processors -->
-                    <div class="hb-group-label">Generic</div>
-                    <div class="hb-slot" data-tool="compiler" title="Compiler [E]" onclick="game.selectTool('compiler')"><kbd>E</kbd><span>⚙</span></div>
-                    <div class="hb-slot" data-tool="qa_gate" title="QA Gate [R]" onclick="game.selectTool('qa_gate')"><kbd>R</kbd><span>✔</span></div>
+                    <div class="hb-slot" data-tool="compiler"     title="Compiler [E]"          onclick="game.selectTool('compiler')"><kbd>E</kbd><span>⚙</span></div>
+                    <div class="hb-slot" data-tool="qa_gate"      title="QA Gate [R]"           onclick="game.selectTool('qa_gate')"><kbd>R</kbd><span>✔</span></div>
                     <div class="hb-slot hb-locked" data-tool="change_board" title="Change Board [T]" onclick="game.selectTool('change_board')"><kbd>T</kbd><span>📋</span></div>
-                    <div class="hb-slot hb-locked" data-tool="hana_db" title="HANA DB [Y]" onclick="game.selectTool('hana_db')"><kbd>Y</kbd><span>🗄</span></div>
+                    <div class="hb-slot hb-locked" data-tool="hana_db"      title="HANA DB [Y]"      onclick="game.selectTool('hana_db')"><kbd>Y</kbd><span>🗄</span></div>
                     <div class="hb-sep"></div>
-
-                    <!-- INC buildings -->
-                    <div class="hb-group-label hb-label-inc">INC</div>
-                    <div class="hb-slot hb-inc" data-tool="inc_triage" title="INC Triage [G]" onclick="game.selectTool('inc_triage')"><kbd>G</kbd><span>🔵</span></div>
-                    <div class="hb-slot hb-inc hb-locked" data-tool="inc_resolver" title="INC Resolver [H]" onclick="game.selectTool('inc_resolver')"><kbd>H</kbd><span>🔄</span></div>
-                    <div class="hb-slot hb-inc hb-locked" data-tool="inc_closer" title="INC Closer [J]" onclick="game.selectTool('inc_closer')"><kbd>J</kbd><span>✅</span></div>
+                    <div class="hb-slot" data-tool="output"   title="PRD Station [P]"           onclick="game.selectTool('output')"><kbd>P</kbd><span>🏭</span></div>
+                    <div class="hb-slot" data-tool="rnd"      title="R&D Lab [L]"               onclick="game.selectTool('rnd')"><kbd>L</kbd><span>🔬</span></div>
+                    <div class="hb-slot" data-tool="splitter" title="Splitter [F]"              onclick="game.selectTool('splitter')"><kbd>F</kbd><span>⊕</span></div>
                     <div class="hb-sep"></div>
-
-                    <!-- PRB buildings -->
-                    <div class="hb-group-label hb-label-prb">PRB</div>
-                    <div class="hb-slot hb-prb" data-tool="prb_analyst" title="PRB Analyst [N]" onclick="game.selectTool('prb_analyst')"><kbd>N</kbd><span>🔶</span></div>
-                    <div class="hb-slot hb-prb hb-locked" data-tool="prb_rootcause" title="Root Cause [M]" onclick="game.selectTool('prb_rootcause')"><kbd>M</kbd><span>🔍</span></div>
-                    <div class="hb-slot hb-prb hb-locked" data-tool="prb_change" title="PRB→CHG [,]" onclick="game.selectTool('prb_change')"><kbd>,</kbd><span>🔀</span></div>
-                    <div class="hb-sep"></div>
-
-                    <!-- CHG buildings -->
-                    <div class="hb-group-label hb-label-chg">CHG</div>
-                    <div class="hb-slot hb-chg hb-locked" data-tool="chg_impact" title="CHG Impact [V]" onclick="game.selectTool('chg_impact')"><kbd>V</kbd><span>🔮</span></div>
-                    <div class="hb-slot hb-chg hb-locked" data-tool="chg_cab" title="CHG CAB [K]" onclick="game.selectTool('chg_cab')"><kbd>K</kbd><span>📋</span></div>
-                    <div class="hb-slot hb-chg hb-locked" data-tool="chg_deploy" title="CHG Deploy [;]" onclick="game.selectTool('chg_deploy')"><kbd>;</kbd><span>🚀</span></div>
-                    <div class="hb-sep"></div>
-
+                    <div class="hb-slot hb-delete" data-tool="delete" title="Delete [X]"       onclick="game.selectTool('delete')"><kbd>X</kbd><span>❌</span></div>
                     <button class="hb-catalogue" onclick="game.toggleBuildMenu()"><kbd>B</kbd> Katalog</button>
                 </div>
-                <button id="hb-toggle-btn" onclick="game.toggleHotbar()" title="Skrýt/ukázat hotbar [H]">▼ Hide</button>
+                <button id="hb-toggle-btn" onclick="game.toggleHotbar()" title="Skrýt/ukázat hotbar [`]">`</button>
             </div>
 
             <div id="event-banner" class="hidden"></div>
