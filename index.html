@@ -24,6 +24,10 @@
         ▶&ensp;Nová hra
       </button>
 
+            <button id="title-howto-btn" onclick="game.openTutorial()">
+        📖&ensp;Jak hrát
+      </button>
+
             <div id="title-continue-head">
                 <span class="tch-line"></span>
                 <span>Pokračovat v uložené hře</span>
@@ -277,6 +281,10 @@
         <span>▶ Pokračovat</span><kbd>Esc</kbd>
       </button>
 
+            <button class="menu-action" onclick="game.openTutorial()">
+        <span>📖 Tutoriál — jak hrát</span>
+      </button>
+
             <div class="menu-divider">💾 Uložit / Načíst</div>
             <div id="save-slots"></div>
 
@@ -290,6 +298,27 @@
                 <span><kbd>Q</kbd>–<kbd>Y</kbd> <kbd>X</kbd> tools</span>
             </div>
 
+        </div>
+    </div>
+
+    <!-- ── TUTORIAL OVERLAY ─────────────────────────────────────────────────── -->
+    <div id="tut-overlay" class="hidden">
+        <div id="tut-spotlight"></div>
+        <div id="tut-card">
+            <div id="tut-head">
+                <span id="tut-step-icon">🎮</span>
+                <div>
+                    <div id="tut-step-title">Vítej</div>
+                    <div id="tut-step-count">Krok 1 / 1</div>
+                </div>
+                <button id="tut-skip" onclick="game.closeTutorial()" title="Přeskočit (Esc)">Přeskočit ✕</button>
+            </div>
+            <div id="tut-body"></div>
+            <div id="tut-dots"></div>
+            <div id="tut-nav">
+                <button id="tut-prev" onclick="game.tutPrev()">‹ Zpět</button>
+                <button id="tut-next" class="primary" onclick="game.tutNext()">Dál ›</button>
+            </div>
         </div>
     </div>
 

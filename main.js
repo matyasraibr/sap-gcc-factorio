@@ -938,7 +938,9 @@ const game = (() => {
     const el=$('title-overlay'); if(!el)return;
     el.style.animation='title-out .38s ease forwards';
     setTimeout(()=>{el.classList.add('hidden');el.style.animation='';state.paused=false;},380);
-    toast('🎮 Vítej v SAP GCC Factorio! Postav první Miner na ore patch.');
+    let seen=false; try{ seen=localStorage.getItem('sap_tut_seen')==='1'; }catch(e){}
+    if(!seen){ setTimeout(openTutorial,460); }
+    else { toast('🎮 Vítej v SAP GCC Factorio! Postav první Miner na ore patch.'); }
   }
 
   function renderTitleSlots(){
@@ -1128,6 +1130,168 @@ const game = (() => {
     const btn=$('theme-btn');if(btn)btn.textContent=light?'🌙 Dark':'☀ Light';
   }
 
+  // ── TUTORIAL ─────────────────────────────────────────────────────────────
+  const TUT_STEPS = [
+    { icon:'🎮', title:'Vítej v SAP GCC Factorio', target:null, html:
+      `<p>Jsi inženýr v <b>SAP GCC</b> Škoda Auto. Úkol: postavit <b>výrobní linku</b>, která zpracuje ITIL tickety a deployne je do produkce za peníze. 💰</p>
+       <p>Funguje to jako Factorio: <b>těžíš</b> suroviny → vedeš je <b>dopravníky</b> → <b>zpracuješ</b> v budovách → <b>prodáš</b> v PRD stanici.</p>
+       <p>Projdeme to krok za krokem. <kbd>→</kbd> / <kbd>Enter</kbd> = dál, <kbd>Esc</kbd> = přeskočit.</p>` },
+
+    { icon:'💰', title:'Co sleduješ nahoře', target:'#topbar-stats', html:
+      `<p>V horní liště máš klíčové ukazatele:</p>
+       <ul>
+         <li><b>Budget</b> — tvoje CZK, za ně stavíš. Začínáš s <b>800 CZK</b>.</li>
+         <li><b>Items</b> — kolik ticketů je právě na linkách.</li>
+         <li><b>RP</b> — Research Points, za ně odemykáš pokročilé budovy.</li>
+       </ul>
+       <p>Cíl: roztočit linku tak, aby <b>Budget</b> sám rostl.</p>` },
+
+    { icon:'⛏', title:'1 · Těž suroviny', target:'.hb-slot[data-tool="miner"]', html:
+      `<p>Na mapě jsou barevné <b>ore patche</b> — tři typy ticketů:</p>
+       <ul>
+         <li><span class="tut-chip" style="color:var(--blue2)">INC</span> Incident — levný, base 50</li>
+         <li><span class="tut-chip" style="color:var(--orange)">PRB</span> Problem — base 150</li>
+         <li><span class="tut-chip" style="color:var(--purple)">CHG</span> Change — drahý, base 400</li>
+       </ul>
+       <p>Vyber <b>Miner</b> (<kbd>Q</kbd>) a klikni na ore patch. Pak každé <b>3 s</b> vytěží jeden ticket.</p>` },
+
+    { icon:'▶', title:'2 · Postav dopravníky', target:'#belt-mode-bar', html:
+      `<p>Items se samy nepohnou — potřebují <b>belty</b>. Pokládáš je klávesami <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> podle směru toku.</p>
+       <p>Belty jsou <b>barevné podle typu</b> ticketu. Klávesou <kbd>Tab</kbd> přepínáš 🔵 INC / 🟠 PRB / 🟣 CHG. Barva beltu musí sedět na surovinu, kterou veze.</p>
+       <p>Veď belt z mineru směrem k budovám.</p>` },
+
+    { icon:'⚙', title:'3 · Zpracuj items', target:'.hb-slot[data-tool="compiler"]', html:
+      `<p>Každá budova posune ticket o <b>stage</b> výš a znásobí jeho hodnotu:</p>
+       <ul>
+         <li>⚙ <b>Compiler</b> (<kbd>E</kbd>) — RAW → TR, ×1.5</li>
+         <li>✔ <b>QA Gate</b> (<kbd>R</kbd>) — TR → QA✓, ×2.1</li>
+         <li>📋 <b>Change Board</b> (<kbd>T</kbd>) — ×3.2 <i>(za RP)</i></li>
+         <li>🗄 <b>HANA DB</b> (<kbd>Y</kbd>) — ×4.8 <i>(za RP)</i></li>
+       </ul>
+       <p>Polož budovu na cestu beltu — item skrz ni projede a zhodnotí se.</p>` },
+
+    { icon:'🏭', title:'4 · Deployuj do PRD', target:'.hb-slot[data-tool="output"]', html:
+      `<p>Na konec linky postav <b>PRD Deploy Station</b> (<kbd>P</kbd>). Když na ni dorazí zpracovaný ticket, <b>prodá se</b> a hodnota naskáče do Budgetu. 💰</p>
+       <p>Čím víc stagí ticket projde, tím víc CZK dostaneš. Plná INC linka až do HANA = <b>360 CZK</b> místo 75 za surový.</p>` },
+
+    { icon:'🔬', title:'5 · Výzkum a odemykání', target:'.hb-slot[data-tool="rnd"]', html:
+      `<p><b>R&amp;D Lab</b> (<kbd>L</kbd>) místo prodeje mění tickety na <b>Research Points (RP)</b>.</p>
+       <p>Za RP postupně odemykáš:</p>
+       <ul>
+         <li><b>50 RP</b> → Change Board</li>
+         <li><b>150 RP</b> → Express belty 2×</li>
+         <li><b>400 RP</b> → HANA DB</li>
+       </ul>
+       <p>… plus automatizované pipeline buildery v katalogu.</p>` },
+
+    { icon:'🤖', title:'6 · Automatizace', target:'.hb-catalogue', html:
+      `<p>Nechce se ti pokládat minery ručně? V katalogu (<kbd>B</kbd> → záložka <b>Automation</b>) koupíš budovy, které <b>samy injektují</b> tickety:</p>
+       <ul>
+         <li>🎧 <b>Service Desk</b> (<kbd>1</kbd>) — INC každé 3 s</li>
+         <li>🔧 <b>Problem Mgmt</b> (<kbd>2</kbd>) — PRB každé 5 s</li>
+         <li>📋 <b>CAB</b> (<kbd>3</kbd>) — CHG každé 8 s</li>
+       </ul>
+       <p>Pasivní přísun → linka jede sama.</p>` },
+
+    { icon:'⌨', title:'Ovládání a ukládání', target:'.hb-catalogue', html:
+      `<p>Pár klíčových kláves:</p>
+       <ul>
+         <li><kbd>B</kbd> — Blueprint katalog (všechny budovy)</li>
+         <li><kbd>↑↓←→</kbd> posun mapy · <kbd>X</kbd> smazat budovu/belt</li>
+         <li><kbd>Esc</kbd> — menu (pauza)</li>
+         <li><kbd>Ctrl</kbd>+<kbd>S</kbd> — rychlé uložení</li>
+       </ul>
+       <p>Pozor na <b>náhodné události</b> (audity, výpadky) — můžou ubrat i přidat CZK.</p>` },
+
+    { icon:'🚀', title:'A jde se na to!', target:null, html:
+      `<p>Doporučený první řetězec:</p>
+       <p style="text-align:center;font-size:.95rem"><b>⛏ → ⚙ → ✔ → 🏭 PRD</b></p>
+       <p>Postav Miner na INC patch, veď belty přes Compiler a QA Gate do PRD stanice — a sleduj, jak Budget roste. Pak reinvestuj do dalších linek a výzkumu.</p>
+       <p>Tutoriál znovu otevřeš kdykoli z menu (<kbd>Esc</kbd>). Hodně štěstí! 🎮</p>` },
+  ];
+  let tutIndex = 0;
+
+  function positionTut(step){
+    const sp=$('tut-spotlight'), card=$('tut-card');
+    if(!sp||!card)return;
+    let el=null;
+    if(step&&step.target){ try{ el=document.querySelector(step.target); }catch(e){} }
+    if(!el){
+      sp.classList.remove('on');
+      card.classList.remove('anchored');
+      card.style.left='50%'; card.style.top='50%';
+      return;
+    }
+    const r=el.getBoundingClientRect(), pad=6;
+    sp.style.left=(r.left-pad)+'px';
+    sp.style.top=(r.top-pad)+'px';
+    sp.style.width=(r.width+pad*2)+'px';
+    sp.style.height=(r.height+pad*2)+'px';
+    sp.classList.add('on');
+    card.classList.add('anchored');
+    const cw=card.offsetWidth||440, ch=card.offsetHeight||300;
+    const vw=innerWidth, vh=innerHeight, m=16;
+    const left=Math.min(Math.max(m, r.left+r.width/2-cw/2), vw-cw-m);
+    const below=r.bottom+14, above=r.top-ch-14;
+    let top;
+    if(r.top>vh*0.5 && above>=m) top=above;
+    else if(below+ch<=vh-m) top=below;
+    else if(above>=m) top=above;
+    else top=Math.max(m,(vh-ch)/2);
+    card.style.left=left+'px';
+    card.style.top=top+'px';
+  }
+
+  function renderTut(){
+    const s=TUT_STEPS[tutIndex];
+    $('tut-step-icon').textContent=s.icon;
+    $('tut-step-title').textContent=s.title;
+    $('tut-step-count').textContent=`Krok ${tutIndex+1} / ${TUT_STEPS.length}`;
+    $('tut-body').innerHTML=s.html;
+    const dots=$('tut-dots'); dots.innerHTML='';
+    TUT_STEPS.forEach((_,i)=>{
+      const d=document.createElement('div');
+      d.className='tut-dot'+(i===tutIndex?' active':'');
+      d.onclick=()=>tutGoto(i);
+      dots.appendChild(d);
+    });
+    $('tut-prev').disabled = tutIndex===0;
+    $('tut-next').textContent = tutIndex===TUT_STEPS.length-1 ? 'Začít hru ▶' : 'Dál ›';
+    requestAnimationFrame(()=>positionTut(s));
+  }
+
+  function openTutorial(){
+    if(!$('menu-overlay').classList.contains('hidden')) closeMenu();
+    tutIndex=0;
+    state.paused=true;
+    $('tut-overlay').classList.remove('hidden');
+    renderTut();
+  }
+
+  function closeTutorial(){
+    $('tut-overlay').classList.add('hidden');
+    $('tut-spotlight').classList.remove('on');
+    try{ localStorage.setItem('sap_tut_seen','1'); }catch(e){}
+    const titleUp=!$('title-overlay').classList.contains('hidden');
+    const menuUp =!$('menu-overlay').classList.contains('hidden');
+    if(!titleUp && !menuUp) state.paused=false;
+  }
+
+  function tutNext(){ if(tutIndex>=TUT_STEPS.length-1){closeTutorial();return;} tutIndex++; renderTut(); }
+  function tutPrev(){ if(tutIndex>0){tutIndex--; renderTut();} }
+  function tutGoto(n){ tutIndex=Math.max(0,Math.min(TUT_STEPS.length-1,n)); renderTut(); }
+
+  // Tutorial keyboard nav — capture phase so it pre-empts the global handler
+  document.addEventListener('keydown', e=>{
+    if($('tut-overlay').classList.contains('hidden'))return;
+    if(e.key==='Escape'){ e.preventDefault(); e.stopPropagation(); closeTutorial(); }
+    else if(e.key==='ArrowRight'||e.key==='Enter'){ e.preventDefault(); e.stopPropagation(); tutNext(); }
+    else if(e.key==='ArrowLeft'){ e.preventDefault(); e.stopPropagation(); tutPrev(); }
+  }, true);
+  window.addEventListener('resize',()=>{
+    if(!$('tut-overlay').classList.contains('hidden')) positionTut(TUT_STEPS[tutIndex]);
+  });
+
   // ── INIT ───────────────────────────────────────────────────────────────────
   function init(){
     buildGrid();renderGrid();renderItems();buildResearchPanel();updateUI();
@@ -1141,5 +1305,6 @@ const game = (() => {
 
   document.addEventListener('DOMContentLoaded',init);
   return { selectTool, cycleBelt, bmTab, toggleTheme, research, openMenu, closeMenu, saveGame, loadGame, newGame, titleNewGame,
-           purchaseBuilding, openBuildMenu, closeBuildMenu, toggleBuildMenu, toggleHotbar, setBeltMode };
+           purchaseBuilding, openBuildMenu, closeBuildMenu, toggleBuildMenu, toggleHotbar, setBeltMode,
+           openTutorial, closeTutorial, tutNext, tutPrev, tutGoto };
 })();
