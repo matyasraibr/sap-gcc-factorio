@@ -300,6 +300,48 @@ const game = (() => {
   }
   function hideTileTip(){ const tip=$('tile-tooltip'); if(tip) tip.classList.add('hidden'); }
 
+  // Build Menu (key B) hover tooltips — reuse #tile-tooltip
+  const AUTO_INFO = {
+    service_desk: { icon:'🎧', cls:'incident', name:'Service Desk',           desc:'Auto-injektuje INC každé 3s' },
+    problem_mgmt: { icon:'🔧', cls:'problem',  name:'Problem Management',      desc:'Auto-injektuje PRB každé 5s' },
+    cab:          { icon:'📋', cls:'change',   name:'Change Advisory Board',   desc:'Auto-injektuje CHG každé 8s' },
+  };
+  function bmInfo(item){
+    const auto = item.id && item.id.startsWith('bmi-') ? item.id.slice(4).replace(/-/g,'_') : null;
+    if(auto && AUTO_INFO[auto]) return { ...AUTO_INFO[auto] };
+    const tool=item.getAttribute('data-tool');
+    if(tool==='miner')  return { icon:'⛏', cls:'', name:'Miner', desc:`Postav na ore patch · těží každé ${state.minerInterval||3}s` };
+    if(tool==='delete') return { icon:'❌', cls:'', name:'Delete Tool', desc:'Odstraní budovu nebo belt · zdarma' };
+    if(tool && T[tool]) return tileInfo(T[tool]);
+    return null;
+  }
+  function bmTip(e){
+    const tip=$('tile-tooltip'); if(!tip) return;
+    const item=e.target.closest('.bm-item');
+    if(!item){ hideTileTip(); bmTip._last=null; return; }
+    if(bmTip._last===item && !tip.classList.contains('hidden')) return;
+    bmTip._last=item;
+    const info=bmInfo(item);
+    if(!info){ hideTileTip(); return; }
+    let extra='';
+    if(item.classList.contains('bm-locked')){
+      const lc=item.querySelector('.bm-lock-cost');
+      extra = lc ? ` · ${lc.textContent.trim()}` : ' · 🔒 zamčeno';
+    } else {
+      const c=+(item.getAttribute('data-cost')||0);
+      if(c>0) extra=` · cena ${c} CZK`;
+    }
+    tip.innerHTML=`<div class="tt-name${info.cls?' tt-'+info.cls:''}"><span class="tt-icon">${info.icon}</span>${info.name}</div>`+
+                  `<div class="tt-desc">${info.desc}${extra}</div>`;
+    tip.classList.remove('hidden');
+    const r=item.getBoundingClientRect(), tw=tip.offsetWidth, th=tip.offsetHeight, m=8;
+    let left=r.left-tw-10;
+    if(left<m) left=r.right+10;
+    if(left+tw>innerWidth-m) left=Math.max(m, innerWidth-tw-m);
+    const top=Math.min(Math.max(m, r.top+r.height/2-th/2), innerHeight-th-m);
+    tip.style.left=left+'px'; tip.style.top=top+'px';
+  }
+
   function renderGrid() {
     for (let y=0;y<ROWS;y++) for (let x=0;x<COLS;x++) {
       const t=state.grid[y][x],el=cellEls[y][x];
@@ -822,6 +864,7 @@ const game = (() => {
   function closeBuildMenu(){
     state.buildMenuOpen=false;
     $('build-menu-modal').classList.add('hidden');
+    hideTileTip(); bmTip._last=null;
     // Reset panel to CSS-centered position for next open
     const p=$('bm-panel');
     if(p){p.style.left='';p.style.top='';p.style.transform='';}
@@ -1366,6 +1409,8 @@ const game = (() => {
     selectTool('miner');
     initBMDrag();
     renderTitleSlots();
+    const bmp=$('bm-panel');
+    if(bmp){ bmp.addEventListener('mouseover',bmTip); bmp.addEventListener('mouseleave',()=>{hideTileTip();bmTip._last=null;}); }
     eventLog('🎮 Sestav: ⛏→⚙→✔→📋→🗄→🏭 PRD = ×4.8 · Postav PRD Station!','good');
     eventLog('💡 B=Catalogue · Esc=menu · Ctrl+S=save · P=PRD · L=R&D','good');
     restartTick(state.beltTickMs);
