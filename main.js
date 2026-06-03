@@ -67,10 +67,10 @@ const game = (() => {
   };
 
   const PROC_CFG = {
-    [T.compiler]:     { needStage:0, ticks:6, outStage:1 },
-    [T.qa_gate]:      { needStage:1, ticks:6, outStage:2 },
-    [T.change_board]: { needStage:2, ticks:8, outStage:3 },
-    [T.hana_db]:      { needStage:3, ticks:8, outStage:4 },
+    [T.compiler]:     { needStage:0, ticks:8, outStage:1 },
+    [T.qa_gate]:      { needStage:1, ticks:8, outStage:2 },
+    [T.change_board]: { needStage:2, ticks:12, outStage:3 },
+    [T.hana_db]:      { needStage:3, ticks:12, outStage:4 },
     // BC/BW ore-type-specific pipeline shortcuts — forces dedicated lanes per ore
     // SM36: INC-only shortcut RAW(0)→QA✓(2), saves Compiler+QA Gate
     [T.sm36]:   { needStage:0, oreTypes:['incident'], ticks:2, outStage:2 },
@@ -92,11 +92,15 @@ const game = (() => {
     [T.chg_deploy]:   { needStage:3, oreTypes:['change'],   ticks:2, outStage:4 },
   };
 
-  const PROC_DEFAULTS = { compiler:6, qa_gate:6, change_board:8, hana_db:8, sm36:2, stms:3, oss:1, bw_dtp:3,
+  const PROC_DEFAULTS = { compiler:8, qa_gate:8, change_board:12, hana_db:12, sm36:2, stms:3, oss:1, bw_dtp:3,
     inc_triage:1, inc_resolver:2, inc_closer:1, prb_analyst:2, prb_rootcause:3, prb_change:2, chg_impact:3, chg_cab:4, chg_deploy:2 };
   const COSTS = { miner:150, belt:8, belt_i:12, belt_p:20, belt_c:35,
     compiler:300, qa_gate:200, change_board:500, hana_db:800, output:400, rnd:600, sm36:200, stms:300, oss:280, bw_dtp:500, splitter:60,
     inc_triage:150, inc_resolver:300, inc_closer:600, prb_analyst:400, prb_rootcause:800, prb_change:1200, chg_impact:800, chg_cab:1500, chg_deploy:2500 };
+
+  // RP needed to unlock each research-gated building (mirror of RP_MILESTONES, for menu labels)
+  const UNLOCK_RP = { inc_resolver:5, chg_impact:20, prb_rootcause:20, change_board:50, inc_closer:50,
+    prb_change:100, chg_cab:100, stms:150, bw_dtp:300, chg_deploy:300, hana_db:400 };
   const BELT_CYCLE = ['b_r','b_d','b_u','b_l'];
   const HOTKEYS = {'1':'miner','2':'b_r','3':'compiler','4':'qa_gate','5':'change_board','6':'hana_db','x':'delete'};
 
@@ -110,17 +114,17 @@ const game = (() => {
   const RESEARCH = {
     budget_analyst:  { label:'Budget Analyst',    icon:'💰',  tier:0, desc:'+10% payouts',       cost:400,  req:[],                apply(s){s.globalMult*=1.10} },
     auto_problem:    { label:'Problem Automation', icon:'🔧',  tier:0, desc:'Odemkne Problem Mgmt (auto PRB)', cost:0, rpCost:15, req:[],          apply(s){s.unlocked.add('problem_mgmt');} },
-    fast_compile:    { label:'Fast Compile',       icon:'⚙',  tier:0, desc:'Compiler 6s → 3s',   cost:600,  req:[],                apply(){PROC_CFG[T.compiler].ticks=3} },
-    auto_qa:         { label:'Auto QA',            icon:'🔬', tier:0, desc:'QA Gate → instant',   cost:800,  req:[],                apply(){PROC_CFG[T.qa_gate].ticks=0} },
+    fast_compile:    { label:'Fast Compile',       icon:'⚙',  tier:0, desc:'Compiler 8s → 4s',   cost:600,  req:[],                apply(){PROC_CFG[T.compiler].ticks=4} },
+    auto_qa:         { label:'Auto QA',            icon:'🔬', tier:0, desc:'QA Gate 8s → instant',cost:800,  req:[],                apply(){PROC_CFG[T.qa_gate].ticks=0} },
     cost_optimizer:  { label:'Cost Optimizer',     icon:'💰💰',tier:1, desc:'+20% payouts',       cost:1000, req:['budget_analyst'],apply(s){s.globalMult*=1.20} },
     auto_change:     { label:'Change Automation',  icon:'📋',  tier:1, desc:'Odemkne Change Adv. Board (auto CHG)', cost:0, rpCost:60, req:['auto_problem'], apply(s){s.unlocked.add('cab');} },
-    instant_compile: { label:'Instant Compile',    icon:'⚙⚙', tier:1, desc:'Compiler 3s → 1s',  cost:1800, req:['fast_compile'],  apply(){PROC_CFG[T.compiler].ticks=1} },
+    instant_compile: { label:'Instant Compile',    icon:'⚙⚙', tier:1, desc:'Compiler 4s → 1s',  cost:1800, req:['fast_compile'],  apply(){PROC_CFG[T.compiler].ticks=1} },
     auto_overclock:  { label:'Automation Overclock',icon:'⚙⚡',tier:1, desc:'Auto-injektory +30% rychlejší', cost:1500, req:['auto_problem'], apply(s){s.autoSpeedMult=0.7;} },
     ai_optimizer:    { label:'SAP AI Optimizer',   icon:'🤖', tier:2, desc:'Values +30%',         cost:3000, req:['instant_compile'],apply(s){s.globalMult*=1.30} },
     cloud_integration:{ label:'Cloud Integration', icon:'☁️', tier:3, desc:'×1.5 all values',    cost:6000, req:['ai_optimizer'], apply(s){s.globalMult*=1.50} },
-    devops_pipeline: { label:'DevOps Pipeline',    icon:'🔄', tier:3, desc:'Change Board 8s → 2s',cost:4000, req:['ai_optimizer'], apply(){PROC_CFG[T.change_board].ticks=2} },
+    devops_pipeline: { label:'DevOps Pipeline',    icon:'🔄', tier:3, desc:'Change Board 12s → 3s',cost:4000, req:['ai_optimizer'], apply(){PROC_CFG[T.change_board].ticks=3} },
     belt_booster:    { label:'Belt Speed Booster', icon:'🚄⚡',tier:1, desc:'Belts 25% faster',   cost:0,   rpCost:200, req:[], apply(s){s.beltTickMs=750;restartTick(750);} },
-    hana_speed:      { label:'HANA Express',       icon:'🗄⚡',tier:2, desc:'HANA DB 8s → 3s',    cost:0,   rpCost:300, req:['belt_booster'], apply(){PROC_CFG[T.hana_db].ticks=3} },
+    hana_speed:      { label:'HANA Express',       icon:'🗄⚡',tier:2, desc:'HANA DB 12s → 4s',   cost:0,   rpCost:300, req:['belt_booster'], apply(){PROC_CFG[T.hana_db].ticks=4} },
     ai_inspector:    { label:'AI Quality Inspector',icon:'🤖🔍',tier:2, desc:'QA quality +15%',   cost:0,   rpCost:400, req:['belt_booster'], apply(s){s.globalMult*=1.15;} },
     hana_cloud:      { label:'HANA Cloud Opt.',    icon:'☁⚡', tier:3, desc:'PRD payouts ×1.5',  cost:1500,rpCost:600, req:['ai_inspector'], apply(s){s.hanaCloudMult=1.5;} },
   };
@@ -601,7 +605,7 @@ const game = (() => {
      'inc_resolver','inc_closer','prb_rootcause','prb_change','chg_impact','chg_cab','chg_deploy'].forEach(k=>{
       const isLk=!state.unlocked.has(k);
       const bmi=$('bm-'+k.replace(/_/g,'-'));
-      if(bmi){bmi.classList.toggle('bm-locked',isLk);const lc=bmi.querySelector('.bm-lock-cost');if(lc)lc.textContent=isLk?'🔒 RP needed':`${COSTS[k]} CZK`;}
+      if(bmi){bmi.classList.toggle('bm-locked',isLk);const lc=bmi.querySelector('.bm-lock-cost');if(lc)lc.textContent=isLk?`🔒 ${UNLOCK_RP[k]??''} RP`:`${COSTS[k]} CZK`;}
       document.querySelectorAll(`.hb-slot[data-tool="${k}"]`).forEach(s=>s.classList.toggle('hb-locked',isLk));
     });
     if(state.buildMenuOpen)renderBuildMenu();
