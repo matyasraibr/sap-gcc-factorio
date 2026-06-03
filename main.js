@@ -55,6 +55,8 @@ const game = (() => {
   const MIN_TO_ORE = { min_i:'ore_i', min_p:'ore_p', min_c:'ore_c' };
   const ORE_TYPE   = { ore_i:'incident', ore_p:'problem', ore_c:'change',
                        min_i:'incident', min_p:'problem', min_c:'change' };
+  // Miner can only be placed on the ore patch matching the active belt mode (inc/prb/chg)
+  const MODE_ORE   = { inc:'ore_i', prb:'ore_p', chg:'ore_c' };
 
   const STAGE_MULT  = [1.0, 1.5, 2.1, 3.2, 4.8];
   const STAGE_LABEL = ['RAW','TR','QA✓','CR✓','HANA'];
@@ -456,6 +458,7 @@ const game = (() => {
     }
     if(tool==='miner'){
       if(!ORE_TILES.has(t)){toast('⛏ Klikni na barevný ore patch!');return;}
+      if(t!==MODE_ORE[_beltMode]){toast(`⛏ ${BELT_MODE_LABEL[_beltMode]} Miner jen na ${_beltMode.toUpperCase()} patch · Tab přepne typ`);return;}
       if(state.budget<COSTS.miner){toast(`❌ Potřebuješ ${COSTS.miner} CZK`);return;}
       state.budget-=COSTS.miner;
       state.grid[y][x]=ORE_TO_MIN[t];
@@ -530,7 +533,7 @@ const game = (() => {
 
     const locked=PROC_TILES.has(T[tool])&&!state.unlocked.has(tool);
     const hints={
-      miner:`⛏ Klikni na ore patch · každé ${state.minerInterval}s · 150 CZK  [Q]`,
+      miner:`⛏ ${BELT_MODE_LABEL[_beltMode]} Miner · klikni na ${_beltMode.toUpperCase()} patch · každé ${state.minerInterval}s · 150 CZK  ·  Tab=typ  [Q]`,
       b_r:'▶',b_l:'◀',b_d:'▼',b_u:'▲',
       bi_r:'🔵▶ INC Belt → · 12 CZK  [D]', bi_l:'🔵◀ INC Belt ← · 12 CZK  [A]',
       bi_d:'🔵▼ INC Belt ↓ · 12 CZK  [S]', bi_u:'🔵▲ INC Belt ↑ · 12 CZK  [W]',
@@ -652,6 +655,8 @@ const game = (() => {
       const newTool=`${pfx}_${dir}`;
       if(T[newTool])selectTool(newTool);
     }
+    // Miner follows the active ore mode — refresh its hint
+    if(state.tool==='miner')selectTool('miner');
     toast(`Belt mode: ${BELT_MODE_LABEL[mode]} (Tab přepne)`);
   }
 
@@ -1288,7 +1293,7 @@ const game = (() => {
          <li><span class="tut-chip" style="color:var(--orange)">PRB</span> Problem — base 150</li>
          <li><span class="tut-chip" style="color:var(--purple)">CHG</span> Change — drahý, base 400</li>
        </ul>
-       <p>Chceš víc surovin nebo PRB/CHG ručně? Postav <b>Miner</b> (<kbd>Q</kbd>) na ložisko — těží každé 3 s.</p>` },
+       <p>Chceš víc surovin nebo PRB/CHG ručně? Postav <b>Miner</b> (<kbd>Q</kbd>) na ložisko — jde jen na patch <b>aktivního typu</b> (<kbd>Tab</kbd> přepíná 🔵/🟠/🟣 jako u beltů). Těží každé 3 s.</p>` },
 
     { icon:'▶', title:'2 · Postav dopravníky', target:'#belt-mode-bar', html:
       `<p>Items se samy nepohnou — potřebují <b>belty</b>. Pokládáš je klávesami <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> podle směru toku.</p>
