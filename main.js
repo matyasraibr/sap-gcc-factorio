@@ -874,6 +874,7 @@ const game = (() => {
     Object.keys(PROC_DEFAULTS).forEach(k=>{ if(T[k]&&PROC_CFG[T[k]]) PROC_CFG[T[k]].ticks=PROC_DEFAULTS[k]; });
     clearItemEls();renderGrid();renderItems();buildResearchPanel();updateUI();
     closeMenu();toast('🔄 Nová hra zahájena!');
+    setTimeout(openTutorial,260);
   }
 
   function getSaveInfo(slot){
@@ -938,9 +939,7 @@ const game = (() => {
     const el=$('title-overlay'); if(!el)return;
     el.style.animation='title-out .38s ease forwards';
     setTimeout(()=>{el.classList.add('hidden');el.style.animation='';state.paused=false;},380);
-    let seen=false; try{ seen=localStorage.getItem('sap_tut_seen')==='1'; }catch(e){}
-    if(!seen){ setTimeout(openTutorial,460); }
-    else { toast('🎮 Vítej v SAP GCC Factorio! Postav první Miner na ore patch.'); }
+    setTimeout(openTutorial,460);
   }
 
   function renderTitleSlots(){

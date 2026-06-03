@@ -24,10 +24,6 @@
         ▶&ensp;Nová hra
       </button>
 
-            <button id="title-howto-btn" onclick="game.openTutorial()">
-        📖&ensp;Jak hrát
-      </button>
-
             <div id="title-continue-head">
                 <span class="tch-line"></span>
                 <span>Pokračovat v uložené hře</span>
@@ -56,6 +52,7 @@
             <div class="stat-chip"><span class="stat-label">Minerů</span><span class="stat-value" id="stat-raw">0 ⛏</span></div>
             <div class="stat-chip chip-rp"><span class="stat-label">RP</span><span class="stat-value" id="stat-rp">0 RP</span></div>
         </div>
+        <button id="tutorial-btn" onclick="game.openTutorial()">📖 Tutoriál</button>
         <button id="theme-btn" onclick="game.toggleTheme()">☀ Light</button>
         <button id="topbar-menu-btn" onclick="game.openMenu()">≡ Menu</button>
     </header>
