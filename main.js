@@ -214,6 +214,8 @@ const game = (() => {
       const d=document.createElement('div');
       d.className='gc';
       d.addEventListener('click',()=>onCell(x,y));
+      d.addEventListener('mouseenter',()=>showTileTip(x,y,d));
+      d.addEventListener('mouseleave',hideTileTip);
       g.appendChild(d); return d;
     }));
   }
@@ -230,6 +232,73 @@ const game = (() => {
     [T.prb_analyst]:'🔶',[T.prb_rootcause]:'🔍',[T.prb_change]:'🔀',
     [T.chg_impact]:'🔮',[T.chg_cab]:'📋',[T.chg_deploy]:'🚀',
   };
+
+  // ── HOVER TOOLTIPS ─────────────────────────────────────────────────────────
+  const ORE_LABEL = { incident:'INC', problem:'PRB', change:'CHG' };
+  const PROC_NAME = {
+    [T.compiler]:'ABAP Compiler', [T.qa_gate]:'QA Gate', [T.change_board]:'Change Board', [T.hana_db]:'HANA DB',
+    [T.sm36]:'SM36 Scheduler', [T.stms]:'STMS Router', [T.oss]:'OSS Note Scanner', [T.bw_dtp]:'BW DTP Processor',
+    [T.inc_triage]:'INC Triage', [T.inc_resolver]:'INC Resolver', [T.inc_closer]:'INC Auto-Closer',
+    [T.prb_analyst]:'PRB Analyst', [T.prb_rootcause]:'Root Cause Analysis', [T.prb_change]:'PRB→Change Converter',
+    [T.chg_impact]:'CHG Impact Analyzer', [T.chg_cab]:'CHG CAB Review', [T.chg_deploy]:'CHG Emergency Deploy',
+  };
+  const TT_ARROW = t => ({[T.b_r]:'→',[T.b_l]:'←',[T.b_d]:'↓',[T.b_u]:'↑',
+    [T.bi_r]:'→',[T.bi_l]:'←',[T.bi_d]:'↓',[T.bi_u]:'↑',
+    [T.bp_r]:'→',[T.bp_l]:'←',[T.bp_d]:'↓',[T.bp_u]:'↑',
+    [T.bc_r]:'→',[T.bc_l]:'←',[T.bc_d]:'↓',[T.bc_u]:'↑'}[t]||'▶');
+
+  function tileInfo(t){
+    if(!t||t===T.empty) return null;
+    if(ORE_TILES.has(t)){
+      const ot=ORE_TYPE[t];
+      return { icon:'◆', cls:ot, name:`${ORE_LABEL[ot]} ložisko`,
+               desc:`Postav sem Miner (Q) · base ${REQ[ot].value} CZK` };
+    }
+    if(MIN_TILES.has(t)){
+      const ot=ORE_TYPE[t], s=(state.minerInterval||3);
+      return { icon:'⛏', cls:ot, name:`Miner — ${ORE_LABEL[ot]}`,
+               desc:`Těží ${ORE_LABEL[ot]} každé ${s}s · vkládá na sousední belt` };
+    }
+    if(BELT_TILES.has(t)){
+      const arr=TT_ARROW(t), ore=BELT_ORE[t];
+      return { icon:arr, cls:ore||'', name:`${ore?ORE_LABEL[ore]+' ':''}Belt ${arr}`,
+               desc: ore?`Posune jen ${ORE_LABEL[ore]} items směrem ${arr}`
+                        :`Posune items směrem ${arr}` };
+    }
+    if(t===T.splitter) return { icon:'⊕', cls:'', name:'Splitter', desc:'Round-robin rozdělí tok do volných sousedních beltů' };
+    if(t===T.output)   return { icon:'🏭', cls:'', name:'PRD Deploy Station', desc:'Prodá hotový ticket → přičte hodnotu do Budgetu' };
+    if(t===T.rnd)      return { icon:'🔬', cls:'', name:'R&D Lab', desc:'Místo prodeje mění items na Research Points (RP)' };
+    if(PROC_TILES.has(t)){
+      const cfg=PROC_CFG[t], nm=PROC_NAME[t]||t;
+      const secs=Math.round((cfg.ticks*(state.beltTickMs||1000))/1000);
+      const time=cfg.ticks<=0?'instant':`~${secs}s`;
+      let line;
+      if(cfg.outStage>=0 && cfg.needStage>=0)
+        line=`${STAGE_LABEL[cfg.needStage]} → ${STAGE_LABEL[cfg.outStage]} · hodnota ×${STAGE_MULT[cfg.outStage]}`;
+      else if(cfg.valueMult)
+        line=`hodnota ×${cfg.valueMult}`+(cfg.needStage>=0?` · od ${STAGE_LABEL[cfg.needStage]} výš`:'');
+      else line='zpracování';
+      const restr=cfg.oreTypes?` · jen ${cfg.oreTypes.map(o=>ORE_LABEL[o]).join('+')}`:'';
+      return { icon:TILE_ICON[t]||'⚙', cls:'', name:nm, desc:`${line} · ${time}${restr}` };
+    }
+    return null;
+  }
+
+  function showTileTip(x,y,cell){
+    const tip=$('tile-tooltip'); if(!tip) return;
+    const info=tileInfo(state.grid[y]?.[x]);
+    if(!info){ tip.classList.add('hidden'); return; }
+    tip.innerHTML=`<div class="tt-name${info.cls?' tt-'+info.cls:''}"><span class="tt-icon">${info.icon}</span>${info.name}</div>`+
+                  `<div class="tt-desc">${info.desc}</div>`;
+    tip.classList.remove('hidden');
+    const r=cell.getBoundingClientRect(), tw=tip.offsetWidth, th=tip.offsetHeight, m=8;
+    let left=Math.min(Math.max(m, r.left+r.width/2-tw/2), innerWidth-tw-m);
+    let top=r.top-th-8;
+    if(top<m) top=r.bottom+8;
+    tip.style.left=left+'px';
+    tip.style.top=top+'px';
+  }
+  function hideTileTip(){ const tip=$('tile-tooltip'); if(tip) tip.classList.add('hidden'); }
 
   function renderGrid() {
     for (let y=0;y<ROWS;y++) for (let x=0;x<COLS;x++) {

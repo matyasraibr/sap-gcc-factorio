@@ -1383,3 +1383,30 @@ body.light #event-log p.bad  { color:var(--red); }
 #tut-nav button.primary:hover { background: var(--blue2); }
 #tut-nav button:disabled { opacity: .35; cursor: default; }
 #tut-nav button:disabled:hover { background: var(--surface); border-color: var(--border2); }
+
+/* ===== TILE HOVER TOOLTIP ===== */
+#tile-tooltip {
+  position: fixed; z-index: 1500;
+  pointer-events: none;
+  min-width: 130px; max-width: 240px;
+  background: var(--panel);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: 7px 10px;
+  box-shadow: 0 8px 28px rgba(0,0,0,.6), 0 0 0 1px var(--border);
+  font-family: var(--font);
+  animation: tt-in .1s ease;
+}
+#tile-tooltip.hidden { display: none !important; }
+@keyframes tt-in { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+.tt-name {
+  display: flex; align-items: center; gap: 7px;
+  font-size: .8rem; font-weight: 700; color: var(--text);
+  margin-bottom: 3px;
+}
+.tt-icon { font-size: .95rem; line-height: 1; }
+.tt-desc { font-size: .68rem; color: var(--dim); line-height: 1.4; }
+/* ore-type accent on the name */
+.tt-name.tt-incident { color: var(--blue2); }
+.tt-name.tt-problem  { color: var(--orange); }
+.tt-name.tt-change   { color: var(--purple); }
