@@ -67,10 +67,10 @@ const game = (() => {
   };
 
   const PROC_CFG = {
-    [T.compiler]:     { needStage:0, ticks:2, outStage:1 },
-    [T.qa_gate]:      { needStage:1, ticks:1, outStage:2 },
-    [T.change_board]: { needStage:2, ticks:3, outStage:3 },
-    [T.hana_db]:      { needStage:3, ticks:2, outStage:4 },
+    [T.compiler]:     { needStage:0, ticks:6, outStage:1 },
+    [T.qa_gate]:      { needStage:1, ticks:6, outStage:2 },
+    [T.change_board]: { needStage:2, ticks:8, outStage:3 },
+    [T.hana_db]:      { needStage:3, ticks:8, outStage:4 },
     // BC/BW ore-type-specific pipeline shortcuts — forces dedicated lanes per ore
     // SM36: INC-only shortcut RAW(0)→QA✓(2), saves Compiler+QA Gate
     [T.sm36]:   { needStage:0, oreTypes:['incident'], ticks:2, outStage:2 },
@@ -92,7 +92,7 @@ const game = (() => {
     [T.chg_deploy]:   { needStage:3, oreTypes:['change'],   ticks:2, outStage:4 },
   };
 
-  const PROC_DEFAULTS = { compiler:2, qa_gate:1, change_board:3, hana_db:2, sm36:2, stms:3, oss:1, bw_dtp:3,
+  const PROC_DEFAULTS = { compiler:6, qa_gate:6, change_board:8, hana_db:8, sm36:2, stms:3, oss:1, bw_dtp:3,
     inc_triage:1, inc_resolver:2, inc_closer:1, prb_analyst:2, prb_rootcause:3, prb_change:2, chg_impact:3, chg_cab:4, chg_deploy:2 };
   const COSTS = { miner:150, belt:8, belt_i:12, belt_p:20, belt_c:35,
     compiler:300, qa_gate:200, change_board:500, hana_db:800, output:400, rnd:600, sm36:200, stms:300, oss:280, bw_dtp:500, splitter:60,
@@ -102,24 +102,25 @@ const game = (() => {
 
   const AUTO_BUILD_CFG = {
     service_desk: { oreType:'incident', interval:3, cost:100,  label:'Service Desk',     icon:'🎧', desc:'Auto INC · 3s' },
-    problem_mgmt: { oreType:'problem',  interval:5, cost:300,  label:'Problem Mgmt',      icon:'🔧', desc:'Auto PRB · 5s' },
-    cab:          { oreType:'change',   interval:8, cost:800,  label:'Change Adv. Board', icon:'📋', desc:'Auto CHG · 8s' },
+    problem_mgmt: { oreType:'problem',  interval:5, cost:300,  label:'Problem Mgmt',      icon:'🔧', desc:'Auto PRB · 5s', lock:'problem_mgmt' },
+    cab:          { oreType:'change',   interval:8, cost:800,  label:'Change Adv. Board', icon:'📋', desc:'Auto CHG · 8s', lock:'cab' },
   };
 
   // ── RESEARCH TREE ──────────────────────────────────────────────────────────
   const RESEARCH = {
     budget_analyst:  { label:'Budget Analyst',    icon:'💰',  tier:0, desc:'+10% payouts',       cost:400,  req:[],                apply(s){s.globalMult*=1.10} },
-    fast_mining:     { label:'Fast Mining',        icon:'⚡',  tier:0, desc:'Mining 3s → 2s',     cost:500,  req:[],                apply(s){s.minerInterval=2} },
-    fast_compile:    { label:'Fast Compile',       icon:'⚙',  tier:0, desc:'Compiler 2s → 1s',   cost:600,  req:[],                apply(){PROC_CFG[T.compiler].ticks=1} },
-    auto_qa:         { label:'Auto QA',            icon:'🔬', tier:0, desc:'QA Gate instant',     cost:800,  req:[],                apply(){PROC_CFG[T.qa_gate].ticks=0} },
+    auto_problem:    { label:'Problem Automation', icon:'🔧',  tier:0, desc:'Odemkne Problem Mgmt (auto PRB)', cost:0, rpCost:15, req:[],          apply(s){s.unlocked.add('problem_mgmt');} },
+    fast_compile:    { label:'Fast Compile',       icon:'⚙',  tier:0, desc:'Compiler 6s → 3s',   cost:600,  req:[],                apply(){PROC_CFG[T.compiler].ticks=3} },
+    auto_qa:         { label:'Auto QA',            icon:'🔬', tier:0, desc:'QA Gate → instant',   cost:800,  req:[],                apply(){PROC_CFG[T.qa_gate].ticks=0} },
     cost_optimizer:  { label:'Cost Optimizer',     icon:'💰💰',tier:1, desc:'+20% payouts',       cost:1000, req:['budget_analyst'],apply(s){s.globalMult*=1.20} },
-    turbo_mining:    { label:'Turbo Mining',       icon:'⚡⚡',tier:1, desc:'Mining 2s → 1s',     cost:1200, req:['fast_mining'],   apply(s){s.minerInterval=1} },
-    instant_compile: { label:'Instant Compile',    icon:'⚙⚙', tier:1, desc:'Compiler instant',  cost:1800, req:['fast_compile'],  apply(){PROC_CFG[T.compiler].ticks=0} },
+    auto_change:     { label:'Change Automation',  icon:'📋',  tier:1, desc:'Odemkne Change Adv. Board (auto CHG)', cost:0, rpCost:60, req:['auto_problem'], apply(s){s.unlocked.add('cab');} },
+    instant_compile: { label:'Instant Compile',    icon:'⚙⚙', tier:1, desc:'Compiler 3s → 1s',  cost:1800, req:['fast_compile'],  apply(){PROC_CFG[T.compiler].ticks=1} },
+    auto_overclock:  { label:'Automation Overclock',icon:'⚙⚡',tier:1, desc:'Auto-injektory +30% rychlejší', cost:1500, req:['auto_problem'], apply(s){s.autoSpeedMult=0.7;} },
     ai_optimizer:    { label:'SAP AI Optimizer',   icon:'🤖', tier:2, desc:'Values +30%',         cost:3000, req:['instant_compile'],apply(s){s.globalMult*=1.30} },
     cloud_integration:{ label:'Cloud Integration', icon:'☁️', tier:3, desc:'×1.5 all values',    cost:6000, req:['ai_optimizer'], apply(s){s.globalMult*=1.50} },
-    devops_pipeline: { label:'DevOps Pipeline',    icon:'🔄', tier:3, desc:'Change Board → 1s',  cost:4000, req:['ai_optimizer'], apply(){PROC_CFG[T.change_board].ticks=1} },
+    devops_pipeline: { label:'DevOps Pipeline',    icon:'🔄', tier:3, desc:'Change Board 8s → 2s',cost:4000, req:['ai_optimizer'], apply(){PROC_CFG[T.change_board].ticks=2} },
     belt_booster:    { label:'Belt Speed Booster', icon:'🚄⚡',tier:1, desc:'Belts 25% faster',   cost:0,   rpCost:200, req:[], apply(s){s.beltTickMs=750;restartTick(750);} },
-    extraction_overclock:{ label:'Extraction Overclock',icon:'⛏⚡',tier:1, desc:'Miners −1s interval', cost:500, rpCost:0, req:[], apply(s){s.minerInterval=Math.max(1,s.minerInterval-1);} },
+    hana_speed:      { label:'HANA Express',       icon:'🗄⚡',tier:2, desc:'HANA DB 8s → 3s',    cost:0,   rpCost:300, req:['belt_booster'], apply(){PROC_CFG[T.hana_db].ticks=3} },
     ai_inspector:    { label:'AI Quality Inspector',icon:'🤖🔍',tier:2, desc:'QA quality +15%',   cost:0,   rpCost:400, req:['belt_booster'], apply(s){s.globalMult*=1.15;} },
     hana_cloud:      { label:'HANA Cloud Opt.',    icon:'☁⚡', tier:3, desc:'PRD payouts ×1.5',  cost:1500,rpCost:600, req:['ai_inspector'], apply(s){s.hanaCloudMult=1.5;} },
   };
@@ -173,10 +174,10 @@ const game = (() => {
     tool:'miner', nextId:0, rp:0,
     researched:new Set(), unlocked:new Set(['compiler','qa_gate','sm36','oss','inc_triage','prb_analyst']),
     rpMilestonesHit:new Set(),
-    minerInterval:3, globalMult:1.0, beltPasses:1, beltTickMs:1000, hanaCloudMult:1.0,
+    minerInterval:3, globalMult:1.0, beltPasses:1, beltTickMs:1000, hanaCloudMult:1.0, autoSpeedMult:1.0,
     splitterCtrs:{}, rpmHistory:new Array(60).fill(0), rpmTick:0,
     paused:true,
-    autoBuildings:{ service_desk:0, problem_mgmt:0, cab:0 },
+    autoBuildings:{ service_desk:1, problem_mgmt:0, cab:0 },
     abTimers:     { service_desk:3, problem_mgmt:5, cab:8 },
     buildMenuOpen:false,
   };
@@ -797,7 +798,7 @@ const game = (() => {
     }
     for(const[key,cfg]of Object.entries(AUTO_BUILD_CFG)){
       if(!state.autoBuildings[key])continue;
-      if(--state.abTimers[key]<=0){state.abTimers[key]=cfg.interval;spawnAutoItem(cfg.oreType);}
+      if(--state.abTimers[key]<=0){state.abTimers[key]=Math.max(1,Math.round(cfg.interval*(state.autoSpeedMult||1)));spawnAutoItem(cfg.oreType);}
     }
     for(const it of state.items){
       if(it.delay>0&&--it.delay===0){
@@ -831,17 +832,26 @@ const game = (() => {
 
   // ── AUTO-BUILD ─────────────────────────────────────────────────────────────
   function spawnAutoItem(oreType) {
-    const belts=[];
-    for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++)
-      if(BELT_TILES.has(state.grid[y][x])&&!state.items.find(i=>i.x===x&&i.y===y))
-        belts.push({x,y});
-    if(!belts.length)return;
-    const p=belts[Math.floor(Math.random()*belts.length)];
+    const oreTile={ incident:T.ore_i, problem:T.ore_p, change:T.ore_c }[oreType];
+    const accepts=t=>{ const o=BELT_ORE[t]; return !o||o===oreType; };
+    const adj=[[1,0],[-1,0],[0,1],[0,-1]];
+    const near=[], any=[];
+    for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){
+      const t=state.grid[y][x];
+      if(!BELT_TILES.has(t)||!accepts(t))continue;
+      if(state.items.find(i=>i.x===x&&i.y===y))continue;
+      any.push({x,y});
+      if(adj.some(([dx,dy])=>state.grid[y+dy]?.[x+dx]===oreTile))near.push({x,y});
+    }
+    const pool=near.length?near:any;
+    if(!pool.length)return;
+    const p=pool[Math.floor(Math.random()*pool.length)];
     state.items.push({id:state.nextId++,x:p.x,y:p.y,type:oreType,value:REQ[oreType].value,stage:0,delay:0,pdx:0,pdy:0});
   }
 
   function purchaseBuilding(key) {
     const cfg=AUTO_BUILD_CFG[key];if(!cfg)return;
+    if(cfg.lock&&!state.unlocked.has(cfg.lock)){toast('🔒 Odemkni výzkumem!');return;}
     if(state.budget<cfg.cost){toast(`❌ Need ${cfg.cost} CZK`);return;}
     state.budget-=cfg.cost;state.autoBuildings[key]++;
     const n=state.autoBuildings[key];
@@ -896,11 +906,20 @@ const game = (() => {
       if(el.classList.contains('bm-locked'))return;
       el.classList.toggle('bm-dim', +el.dataset.cost>0 && state.budget<+el.dataset.cost);
     });
-    // Auto-building counts
+    // Auto-building counts + research locks
     for(const[key,cfg]of Object.entries(AUTO_BUILD_CFG)){
       const k=key.replace(/_/g,'-');
       const cn=$('bmc-'+k);
       if(cn)cn.textContent=state.autoBuildings[key]?`×${state.autoBuildings[key]}`:'';
+      if(cfg.lock){
+        const item=$('bmi-'+k);
+        const lk=!state.unlocked.has(cfg.lock);
+        if(item){
+          item.classList.toggle('bm-locked',lk);
+          const ce=item.querySelector('.bm-cost');
+          if(ce)ce.textContent=lk?'🔒 výzkum':`${cfg.cost} CZK`;
+        }
+      }
     }
   }
 
@@ -936,7 +955,7 @@ const game = (() => {
       procTicks:Object.fromEntries(Object.keys(PROC_DEFAULTS).map(k=>[k,PROC_CFG[T[k]].ticks])),
       autoBuildings:{...state.autoBuildings}, abTimers:{...state.abTimers},
       rp:state.rp, rpMilestonesHit:Array.from(state.rpMilestonesHit),
-      beltTickMs:state.beltTickMs, hanaCloudMult:state.hanaCloudMult,
+      beltTickMs:state.beltTickMs, hanaCloudMult:state.hanaCloudMult, autoSpeedMult:state.autoSpeedMult,
     };
     localStorage.setItem(`sap_save_${slot}`,JSON.stringify(data));
     renderMenuSlots();
@@ -957,7 +976,7 @@ const game = (() => {
     state.autoBuildings=d.autoBuildings??{ service_desk:0, problem_mgmt:0, cab:0 };
     state.abTimers=d.abTimers??{ service_desk:3, problem_mgmt:5, cab:8 };
     state.rp=d.rp??0;state.rpMilestonesHit=new Set(d.rpMilestonesHit??[]);
-    state.beltTickMs=d.beltTickMs??1000;state.hanaCloudMult=d.hanaCloudMult??1.0;
+    state.beltTickMs=d.beltTickMs??1000;state.hanaCloudMult=d.hanaCloudMult??1.0;state.autoSpeedMult=d.autoSpeedMult??1.0;
     // Always ensure base-tier buildings are unlocked
     state.unlocked.add('sm36');state.unlocked.add('oss');
     state.unlocked.add('inc_triage');state.unlocked.add('prb_analyst');
@@ -980,8 +999,8 @@ const game = (() => {
     state.beltTickMs=1000;state.hanaCloudMult=1.0;
     state.splitterCtrs={};state.rpmHistory=new Array(60).fill(0);state.rpmTick=0;
     restartTick(1000);
-    state.minerInterval=3;state.globalMult=1.0;state.beltPasses=1;
-    state.autoBuildings={ service_desk:0, problem_mgmt:0, cab:0 };
+    state.minerInterval=3;state.globalMult=1.0;state.beltPasses=1;state.autoSpeedMult=1.0;
+    state.autoBuildings={ service_desk:1, problem_mgmt:0, cab:0 };
     state.abTimers={ service_desk:3, problem_mgmt:5, cab:8 };
     Object.keys(PROC_DEFAULTS).forEach(k=>{ if(T[k]&&PROC_CFG[T[k]]) PROC_CFG[T[k]].ticks=PROC_DEFAULTS[k]; });
     clearItemEls();renderGrid();renderItems();buildResearchPanel();updateUI();
@@ -1257,19 +1276,20 @@ const game = (() => {
        </ul>
        <p>Cíl: roztočit linku tak, aby <b>Budget</b> sám rostl.</p>` },
 
-    { icon:'⛏', title:'1 · Těž suroviny', target:'.hb-slot[data-tool="miner"]', html:
-      `<p>Na mapě jsou barevné <b>ore patche</b> — tři typy ticketů:</p>
+    { icon:'🎧', title:'1 · Suroviny & automatizace', target:'.hb-slot[data-tool="miner"]', html:
+      `<p>Dobrá zpráva: <b>začínáš s INC automatizací</b> 🎧 (Service Desk), která sama generuje <span class="tut-chip" style="color:var(--blue2)">INC</span> tickety u ložiska — stačí jí dát belt!</p>
+       <p>Na mapě jsou tři typy <b>ore patchů</b>:</p>
        <ul>
          <li><span class="tut-chip" style="color:var(--blue2)">INC</span> Incident — levný, base 50</li>
          <li><span class="tut-chip" style="color:var(--orange)">PRB</span> Problem — base 150</li>
          <li><span class="tut-chip" style="color:var(--purple)">CHG</span> Change — drahý, base 400</li>
        </ul>
-       <p>Vyber <b>Miner</b> (<kbd>Q</kbd>) a klikni na ore patch. Pak každé <b>3 s</b> vytěží jeden ticket.</p>` },
+       <p>Chceš víc surovin nebo PRB/CHG ručně? Postav <b>Miner</b> (<kbd>Q</kbd>) na ložisko — těží každé 3 s.</p>` },
 
     { icon:'▶', title:'2 · Postav dopravníky', target:'#belt-mode-bar', html:
       `<p>Items se samy nepohnou — potřebují <b>belty</b>. Pokládáš je klávesami <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> podle směru toku.</p>
        <p>Belty jsou <b>barevné podle typu</b> ticketu. Klávesou <kbd>Tab</kbd> přepínáš 🔵 INC / 🟠 PRB / 🟣 CHG. Barva beltu musí sedět na surovinu, kterou veze.</p>
-       <p>Veď belt z mineru směrem k budovám.</p>` },
+       <p>Veď belt od <b>INC ložiska</b> (kde běží Service Desk) směrem k budovám.</p>` },
 
     { icon:'⚙', title:'3 · Zpracuj items', target:'.hb-slot[data-tool="compiler"]', html:
       `<p>Každá budova posune ticket o <b>stage</b> výš a znásobí jeho hodnotu:</p>
@@ -1279,7 +1299,7 @@ const game = (() => {
          <li>📋 <b>Change Board</b> (<kbd>T</kbd>) — ×3.2 <i>(za RP)</i></li>
          <li>🗄 <b>HANA DB</b> (<kbd>Y</kbd>) — ×4.8 <i>(za RP)</i></li>
        </ul>
-       <p>Polož budovu na cestu beltu — item skrz ni projede a zhodnotí se.</p>` },
+       <p>⚠ Tyhle <b>univerzální</b> budovy zvládnou všechny typy, ale jsou <b>pomalé</b>. Rychlejší jsou <b>dedikované</b> ore-specifické buildery (INC Triage, PRB Analyst…) v katalogu <kbd>B</kbd>.</p>` },
 
     { icon:'🏭', title:'4 · Deployuj do PRD', target:'.hb-slot[data-tool="output"]', html:
       `<p>Na konec linky postav <b>PRD Deploy Station</b> (<kbd>P</kbd>). Když na ni dorazí zpracovaný ticket, <b>prodá se</b> a hodnota naskáče do Budgetu. 💰</p>
@@ -1296,11 +1316,11 @@ const game = (() => {
        <p>… plus automatizované pipeline buildery v katalogu.</p>` },
 
     { icon:'🤖', title:'6 · Automatizace', target:'.hb-catalogue', html:
-      `<p>Nechce se ti pokládat minery ručně? V katalogu (<kbd>B</kbd> → záložka <b>Automation</b>) koupíš budovy, které <b>samy injektují</b> tickety:</p>
+      `<p>Už <b>máš</b> 🎧 Service Desk (auto INC). Další automatizaci v katalogu (<kbd>B</kbd> → <b>Automation</b>) musíš nejdřív <b>odemknout výzkumem</b>:</p>
        <ul>
-         <li>🎧 <b>Service Desk</b> (<kbd>1</kbd>) — INC každé 3 s</li>
-         <li>🔧 <b>Problem Mgmt</b> (<kbd>2</kbd>) — PRB každé 5 s</li>
-         <li>📋 <b>CAB</b> (<kbd>3</kbd>) — CHG každé 8 s</li>
+         <li>🎧 <b>Service Desk</b> — INC každé 3 s <i>(už máš)</i></li>
+         <li>🔧 <b>Problem Mgmt</b> — PRB · 🔬 Problem Automation</li>
+         <li>📋 <b>CAB</b> — CHG · 🔬 Change Automation</li>
        </ul>
        <p>Pasivní přísun → linka jede sama.</p>` },
 
@@ -1315,10 +1335,10 @@ const game = (() => {
        <p>Pozor na <b>náhodné události</b> (audity, výpadky) — můžou ubrat i přidat CZK.</p>` },
 
     { icon:'🚀', title:'A jde se na to!', target:null, html:
-      `<p>Doporučený první řetězec:</p>
-       <p style="text-align:center;font-size:.95rem"><b>⛏ → ⚙ → ✔ → 🏭 PRD</b></p>
-       <p>Postav Miner na INC patch, veď belty přes Compiler a QA Gate do PRD stanice — a sleduj, jak Budget roste. Pak reinvestuj do dalších linek a výzkumu.</p>
-       <p>Tutoriál znovu otevřeš kdykoli z menu (<kbd>Esc</kbd>). Hodně štěstí! 🎮</p>` },
+      `<p>Doporučený start:</p>
+       <p style="text-align:center;font-size:.95rem"><b>🎧 INC → ▶ belt → ⚙ → ✔ → 🏭 PRD</b></p>
+       <p>Máš INC automatizaci — postav belt u <b>INC ložiska</b>, veď ho přes Compiler a QA Gate do PRD stanice a sleduj rostoucí Budget. Pak přes RP odemkni <b>rychlé dedikované linky</b> a PRB/CHG automatizaci.</p>
+       <p>Tutoriál znovu otevřeš z menu (<kbd>Esc</kbd>). Hodně štěstí! 🎮</p>` },
   ];
   let tutIndex = 0;
 
